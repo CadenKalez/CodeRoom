@@ -7,6 +7,8 @@ the modules are densest (the camera drifts to follow it), swinging to whatever y
 
 ## Open it
 
+- **Download:** the installer (`.dmg`) is on the [Releases page](https://github.com/CadenKalez/CodeRoom/releases);
+  the release notes cover the first-launch security prompt.
 - **Mac app:** double-click `Code Room.app` (on your Desktop). Open a repository with
   **File › Open Repository…** (⌘O), the repo button in the header, or by dropping a folder on the
   window or the Dock icon.

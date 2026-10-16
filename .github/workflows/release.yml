@@ -1,0 +1,76 @@
+# Builds "Code Room.app" on a GitHub Mac and packs it into a drag-to-Applications installer (.dmg).
+#
+#   pull request into main  → test build; the .dmg is attached to the run as an artifact
+#   push a tag like v1.2.0  → full build with the sample pack + music, published as a GitHub release
+name: Release
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Work out the version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            # a release needs the full sound: the CC0 sample pack and the music
+            for f in samples/manifest.json music/playlist.json; do
+              [ -f "$f" ] || { echo "::error::$f is missing: upload samples/ and music/ before tagging a release"; exit 1; }
+            done
+            echo "DMG=CodeRoom-$VERSION.dmg" >> "$GITHUB_ENV"
+          else
+            VERSION=""
+            echo "DMG=CodeRoom-test-${GITHUB_SHA::7}.dmg" >> "$GITHUB_ENV"
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Build the app (Apple silicon + Intel)
+        run: UNIVERSAL=1 bash build_app.sh "$RUNNER_TEMP/installed"
+
+      - name: Check the app
+        run: |
+          APP="build/Code Room.app"
+          lipo -info "$APP/Contents/MacOS/CodeRoom"
+          codesign --verify --deep "$APP"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP/Contents/Info.plist"
+          python3 -c "import ast; ast.parse(open('$APP/Contents/Resources/server.py').read())"
+
+      - name: Pack the installer
+        run: |
+          STAGE="$RUNNER_TEMP/dmg"
+          mkdir -p "$STAGE"
+          ditto "build/Code Room.app" "$STAGE/Code Room.app"
+          ln -s /Applications "$STAGE/Applications"
+          for f in samples/CREDITS.md music/CREDITS.md; do
+            if [ -f "$f" ]; then cp "$f" "$STAGE/Credits - $(dirname "$f").md"; fi
+          done
+          # hdiutil is sometimes briefly busy on hosted runners
+          for i in 1 2 3 4 5; do
+            hdiutil create -volname "Code Room" -srcfolder "$STAGE" -ov -format UDZO "$DMG" && break
+            sleep 5
+          done
+          [ -f "$DMG" ]
+          ls -lh "$DMG"
+
+      - name: Attach the test build
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.DMG }}
+          path: ${{ env.DMG }}
+
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" "$DMG" --title "Code Room $VERSION" --notes-file .github/release-notes.md
