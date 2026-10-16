@@ -2,10 +2,64 @@
  "oneshots": {
   "piano": [
    {
+    "file": "piano_5.m4a",
+    "src": "vcsl__JHPiano_Sus_Close_A#1_vl2_rr1.wav",
+    "root": 34.0,
+    "named": 34
+   },
+   {
+    "file": "piano_6.m4a",
+    "src": "vcsl__JHPiano_Sus_Close_C2_vl2_rr1.wav",
+    "root": 36.0,
+    "named": 36
+   },
+   {
+    "file": "piano_7.m4a",
+    "src": "vcsl__JHPiano_Sus_Close_D2_vl2_rr1.wav",
+    "root": 38.0,
+    "named": 38
+   },
+   {
+    "file": "piano_8.m4a",
+    "src": "vcsl__JHPiano_Sus_Close_E2_vl2_rr1.wav",
+    "root": 40.0,
+    "named": 40
+   },
+   {
+    "file": "piano_9.m4a",
+    "src": "vcsl__JHPiano_Sus_Close_F#2_vl2_rr1.wav",
+    "root": 42.0,
+    "named": 42
+   },
+   {
+    "file": "piano_10.m4a",
+    "src": "vcsl__JHPiano_Sus_Close_G#2_vl2_rr1.wav",
+    "root": 44.0,
+    "named": 44
+   },
+   {
+    "file": "piano_11.m4a",
+    "src": "vcsl__JHPiano_Sus_Close_A#2_vl2_rr1.wav",
+    "root": 46.0,
+    "named": 46
+   },
+   {
+    "file": "piano_12.m4a",
+    "src": "vcsl__JHPiano_Sus_Close_C3_vl2_rr1.wav",
+    "root": 48.0,
+    "named": 48
+   },
+   {
     "file": "piano_0.m4a",
     "src": "vcsl__JHPiano_Sus_Close_D3_vl2_rr1.wav",
     "root": 50.0,
     "named": 50
+   },
+   {
+    "file": "piano_13.m4a",
+    "src": "vcsl__JHPiano_Sus_Close_E3_vl2_rr1.wav",
+    "root": 52.02,
+    "named": 52
    },
    {
     "file": "piano_1.m4a",
@@ -14,10 +68,34 @@
     "named": 54
    },
    {
+    "file": "piano_14.m4a",
+    "src": "vcsl__JHPiano_Sus_Close_G#3_vl2_rr1.wav",
+    "root": 55.99,
+    "named": 56
+   },
+   {
+    "file": "piano_15.m4a",
+    "src": "vcsl__JHPiano_Sus_Close_A#3_vl2_rr1.wav",
+    "root": 58.09,
+    "named": 58
+   },
+   {
+    "file": "piano_16.m4a",
+    "src": "vcsl__JHPiano_Sus_Close_C4_vl2_rr1.wav",
+    "root": 60.05,
+    "named": 60
+   },
+   {
     "file": "piano_2.m4a",
     "src": "vcsl__JHPiano_Sus_Close_D4_vl2_rr1.wav",
     "root": 61.96,
     "named": 62
+   },
+   {
+    "file": "piano_17.m4a",
+    "src": "vcsl__JHPiano_Sus_Close_E4_vl2_rr1.wav",
+    "root": 64.01,
+    "named": 64
    },
    {
     "file": "piano_3.m4a",
@@ -26,10 +104,64 @@
     "named": 66
    },
    {
+    "file": "piano_18.m4a",
+    "src": "vcsl__JHPiano_Sus_Close_G#4_vl2_rr1.wav",
+    "root": 68.02,
+    "named": 68
+   },
+   {
+    "file": "piano_19.m4a",
+    "src": "vcsl__JHPiano_Sus_Close_A#4_vl2_rr1.wav",
+    "root": 70.04,
+    "named": 70
+   },
+   {
+    "file": "piano_20.m4a",
+    "src": "vcsl__JHPiano_Sus_Close_C5_vl2_rr1.wav",
+    "root": 72.06,
+    "named": 72
+   },
+   {
     "file": "piano_4.m4a",
     "src": "vcsl__JHPiano_Sus_Close_D5_vl2_rr1.wav",
     "root": 74.01,
     "named": 74
+   },
+   {
+    "file": "piano_21.m4a",
+    "src": "vcsl__JHPiano_Sus_Close_E5_vl2_rr1.wav",
+    "root": 76.0,
+    "named": 76
+   },
+   {
+    "file": "piano_22.m4a",
+    "src": "vcsl__JHPiano_Sus_Close_F#5_vl2_rr1.wav",
+    "root": 77.99,
+    "named": 78
+   },
+   {
+    "file": "piano_23.m4a",
+    "src": "vcsl__JHPiano_Sus_Close_G#5_vl2_rr1.wav",
+    "root": 79.99,
+    "named": 80
+   },
+   {
+    "file": "piano_24.m4a",
+    "src": "vcsl__JHPiano_Sus_Close_A#5_vl2_rr1.wav",
+    "root": 82.02,
+    "named": 82
+   },
+   {
+    "file": "piano_25.m4a",
+    "src": "vcsl__JHPiano_Sus_Close_C6_vl2_rr1.wav",
+    "root": 84.05,
+    "named": 84
+   },
+   {
+    "file": "piano_26.m4a",
+    "src": "vcsl__JHPiano_Sus_Close_D6_vl2_rr1.wav",
+    "root": 86.03,
+    "named": 86
    }
   ],
   "harp": [
@@ -282,6 +414,348 @@
    {
     "file": "oceandrum_1.m4a",
     "src": "vcsl__OceanDrum_Sus_3_Mid.wav"
+   }
+  ],
+  "thunder": [
+   {
+    "file": "thunder_0.m4a",
+    "src": "commons__Booming_Thunder_2023-10-09_2-07-34_am.ogg",
+    "kind": "roll",
+    "seconds": 24.0,
+    "peakAt": 2.0
+   },
+   {
+    "file": "thunder_1.m4a",
+    "src": "commons__Light_Rain_Distant_Thunder_July_5th_2016.wav",
+    "kind": "roll",
+    "seconds": 24.0,
+    "peakAt": 7.5
+   },
+   {
+    "file": "thunder_2.m4a",
+    "src": "commons__Light_Rain_Distant_Thunder_July_5th_2016.wav",
+    "kind": "roll",
+    "seconds": 24.0,
+    "peakAt": 5.5
+   },
+   {
+    "file": "thunder_3.m4a",
+    "src": "commons__Light_Rain_Distant_Thunder_July_5th_2016.wav",
+    "kind": "roll",
+    "seconds": 17.9,
+    "peakAt": 6.1
+   },
+   {
+    "file": "thunder_4.m4a",
+    "src": "commons__Lightning_Recorded_In_Groningen_2018-05-13_01.wav",
+    "kind": "crack",
+    "seconds": 24.0,
+    "peakAt": 1.2
+   },
+   {
+    "file": "thunder_5.m4a",
+    "src": "commons__Lightning_Recorded_In_Groningen_2018-05-13_02.wav",
+    "kind": "roll",
+    "seconds": 24.0,
+    "peakAt": 1.2
+   },
+   {
+    "file": "thunder_6.m4a",
+    "src": "commons__Nosferatu_thunderclap_-_Richard_Humphries.wav",
+    "kind": "crack",
+    "seconds": 20.1,
+    "peakAt": 1.6
+   },
+   {
+    "file": "thunder_7.m4a",
+    "src": "commons__Storm_thunderbolts.ogg",
+    "kind": "roll",
+    "seconds": 12.4,
+    "peakAt": 2.0
+   },
+   {
+    "file": "thunder_8.m4a",
+    "src": "commons__Storm_thunderbolts.ogg",
+    "kind": "crack",
+    "seconds": 14.3,
+    "peakAt": 1.3
+   },
+   {
+    "file": "thunder_9.m4a",
+    "src": "commons__Storm_thunderbolts.ogg",
+    "kind": "roll",
+    "seconds": 17.6,
+    "peakAt": 5.3
+   },
+   {
+    "file": "thunder_10.m4a",
+    "src": "commons__Thunderstorm_after_hot_summer_day_17_minutes_01_of_04.ogg",
+    "kind": "crack",
+    "seconds": 22.6,
+    "peakAt": 1.5
+   },
+   {
+    "file": "thunder_11.m4a",
+    "src": "commons__Thunderstorm_after_hot_summer_day_17_minutes_04_of_04.ogg",
+    "kind": "roll",
+    "seconds": 24.0,
+    "peakAt": 6.3
+   },
+   {
+    "file": "thunder_12.m4a",
+    "src": "commons__Thunderstorm_after_hot_summer_day_17_minutes_04_of_04.ogg",
+    "kind": "roll",
+    "seconds": 19.4,
+    "peakAt": 3.9
+   },
+   {
+    "file": "thunder_13.m4a",
+    "src": "commons__Thunderstorm_after_hot_summer_day_17_minutes_04_of_04.ogg",
+    "kind": "roll",
+    "seconds": 7.9,
+    "peakAt": 3.7
+   }
+  ],
+  "violin": [
+   {
+    "file": "violin_0.m4a",
+    "src": "uiowa__Violin.arco.mf.sulG.G3B3.aiff",
+    "root": 54.96,
+    "named": 55,
+    "seconds": 4.65
+   },
+   {
+    "file": "violin_1.m4a",
+    "src": "uiowa__Violin.arco.mf.sulG.G3B3.aiff",
+    "root": 56.9,
+    "named": 57,
+    "seconds": 4.65
+   },
+   {
+    "file": "violin_2.m4a",
+    "src": "uiowa__Violin.arco.mf.sulG.G3B3.aiff",
+    "root": 58.53,
+    "named": 59,
+    "seconds": 4.55
+   },
+   {
+    "file": "violin_3.m4a",
+    "src": "uiowa__Violin.arco.mf.sulG.B3B4.aiff",
+    "root": 61.4,
+    "named": 61,
+    "seconds": 4.65
+   },
+   {
+    "file": "violin_4.m4a",
+    "src": "uiowa__Violin.arco.mf.sulG.B3B4.aiff",
+    "root": 62.77,
+    "named": 63,
+    "seconds": 4.65
+   },
+   {
+    "file": "violin_5.m4a",
+    "src": "uiowa__Violin.arco.mf.sulG.B3B4.aiff",
+    "root": 64.98,
+    "named": 65,
+    "seconds": 4.65
+   },
+   {
+    "file": "violin_6.m4a",
+    "src": "uiowa__Violin.arco.mf.sulG.B3B4.aiff",
+    "root": 66.7,
+    "named": 67,
+    "seconds": 4.65
+   },
+   {
+    "file": "violin_7.m4a",
+    "src": "uiowa__Violin.arco.mf.sulG.B3B4.aiff",
+    "root": 68.67,
+    "named": 69,
+    "seconds": 4.65
+   },
+   {
+    "file": "violin_8.m4a",
+    "src": "uiowa__Violin.arco.mf.sulG.B3B4.aiff",
+    "root": 71.39,
+    "named": 71,
+    "seconds": 4.65
+   },
+   {
+    "file": "violin_9.m4a",
+    "src": "uiowa__Violin.arco.mf.sulA.C5C6.aiff",
+    "root": 73.37,
+    "named": 73,
+    "seconds": 4.65
+   },
+   {
+    "file": "violin_10.m4a",
+    "src": "uiowa__Violin.arco.mf.sulA.C5C6.aiff",
+    "root": 74.67,
+    "named": 75,
+    "seconds": 4.65
+   },
+   {
+    "file": "violin_11.m4a",
+    "src": "uiowa__Violin.arco.mf.sulA.C5C6.aiff",
+    "root": 76.72,
+    "named": 77,
+    "seconds": 4.65
+   },
+   {
+    "file": "violin_12.m4a",
+    "src": "uiowa__Violin.arco.mf.sulA.C5C6.aiff",
+    "root": 79.24,
+    "named": 79,
+    "seconds": 4.65
+   },
+   {
+    "file": "violin_13.m4a",
+    "src": "uiowa__Violin.arco.mf.sulD.Bb4C6.aiff",
+    "root": 81.17,
+    "named": 81,
+    "seconds": 4.54
+   },
+   {
+    "file": "violin_14.m4a",
+    "src": "uiowa__Violin.arco.mf.sulD.Bb4C6.aiff",
+    "root": 82.91,
+    "named": 83,
+    "seconds": 4.57
+   }
+  ],
+  "flute": [
+   {
+    "file": "flute_0.m4a",
+    "src": "uiowa__Flute.vib.mf.B3B4.aiff",
+    "root": 59.02,
+    "named": 59,
+    "seconds": 1.98
+   },
+   {
+    "file": "flute_1.m4a",
+    "src": "uiowa__Flute.vib.mf.B3B4.aiff",
+    "root": 60.93,
+    "named": 61,
+    "seconds": 1.99
+   },
+   {
+    "file": "flute_2.m4a",
+    "src": "uiowa__Flute.vib.mf.B3B4.aiff",
+    "root": 62.99,
+    "named": 63,
+    "seconds": 2.21
+   },
+   {
+    "file": "flute_3.m4a",
+    "src": "uiowa__Flute.vib.mf.B3B4.aiff",
+    "root": 65.06,
+    "named": 65,
+    "seconds": 2.36
+   },
+   {
+    "file": "flute_4.m4a",
+    "src": "uiowa__Flute.vib.mf.B3B4.aiff",
+    "root": 67.09,
+    "named": 67,
+    "seconds": 2.29
+   },
+   {
+    "file": "flute_5.m4a",
+    "src": "uiowa__Flute.vib.mf.B3B4.aiff",
+    "root": 69.12,
+    "named": 69,
+    "seconds": 2.26
+   },
+   {
+    "file": "flute_6.m4a",
+    "src": "uiowa__Flute.vib.mf.B3B4.aiff",
+    "root": 71.14,
+    "named": 71,
+    "seconds": 2.38
+   },
+   {
+    "file": "flute_7.m4a",
+    "src": "uiowa__Flute.vib.mf.C5B5.aiff",
+    "root": 73.17,
+    "named": 73,
+    "seconds": 2.28
+   },
+   {
+    "file": "flute_8.m4a",
+    "src": "uiowa__Flute.vib.mf.C5B5.aiff",
+    "root": 75.04,
+    "named": 75,
+    "seconds": 2.44
+   },
+   {
+    "file": "flute_9.m4a",
+    "src": "uiowa__Flute.vib.mf.C5B5.aiff",
+    "root": 77.09,
+    "named": 77,
+    "seconds": 2.12
+   },
+   {
+    "file": "flute_10.m4a",
+    "src": "uiowa__Flute.vib.mf.C5B5.aiff",
+    "root": 79.06,
+    "named": 79,
+    "seconds": 2.24
+   },
+   {
+    "file": "flute_11.m4a",
+    "src": "uiowa__Flute.vib.mf.C5B5.aiff",
+    "root": 81.08,
+    "named": 81,
+    "seconds": 2.31
+   },
+   {
+    "file": "flute_12.m4a",
+    "src": "uiowa__Flute.vib.mf.C5B5.aiff",
+    "root": 83.2,
+    "named": 83,
+    "seconds": 2.43
+   },
+   {
+    "file": "flute_13.m4a",
+    "src": "uiowa__Flute.vib.mf.C6B6.aiff",
+    "root": 85.26,
+    "named": 85,
+    "seconds": 2.1
+   },
+   {
+    "file": "flute_14.m4a",
+    "src": "uiowa__Flute.vib.mf.C6B6.aiff",
+    "root": 87.18,
+    "named": 87,
+    "seconds": 2.17
+   },
+   {
+    "file": "flute_15.m4a",
+    "src": "uiowa__Flute.vib.mf.C6B6.aiff",
+    "root": 89.3,
+    "named": 89,
+    "seconds": 1.99
+   },
+   {
+    "file": "flute_16.m4a",
+    "src": "uiowa__Flute.vib.mf.C6B6.aiff",
+    "root": 91.25,
+    "named": 91,
+    "seconds": 2.29
+   },
+   {
+    "file": "flute_17.m4a",
+    "src": "uiowa__Flute.vib.mf.C6B6.aiff",
+    "root": 93.2,
+    "named": 93,
+    "seconds": 2.1
+   },
+   {
+    "file": "flute_18.m4a",
+    "src": "uiowa__Flute.vib.mf.C6B6.aiff",
+    "root": 95.44,
+    "named": 95,
+    "seconds": 2.3
    }
   ]
  },

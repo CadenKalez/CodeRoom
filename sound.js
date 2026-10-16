@@ -37,6 +37,7 @@
   let groups = {}, meters = {};
   const GROUP_LEVELS = { bed: 0.55, tonal: 0.55, music: 0.75, sfx: 1.6 };   // the room is a bed; interactions sit ~10 dB above it
   let enabled = true, volume = 0.7, started = false, ambientOn = false;
+  let testing = false;   // an offline render is running: the live room must not schedule into it
   let pad = [], strings = [], beds = [], timers = [], windSrc = null;
   const now = () => ctx.currentTime;
 
@@ -191,7 +192,11 @@
 
   // ---------- the sample pack ----------
   // Loaded once per page; decoded buffers outlive any AudioContext, so offline test renders reuse them.
-  const bank = { one: {}, loops: {}, beds: {}, ready: false, loading: null };
+  const bank = { one: {}, loops: {}, beds: {}, lazy: {}, ready: false, loading: null };
+  const LAZY = new Set(["thunder"]);       // long takes, decoded only when needed (a few at a time)
+  const sampleBase = () => new URL("samples/", document.baseURI).href;
+  const fetchBuf = (file) => fetch(sampleBase() + file).then((r) => { if (!r.ok) throw new Error(file); return r.arrayBuffer(); })
+                                                       .then((a) => new Promise((ok, no) => ctx.decodeAudioData(a, ok, no)));
   function onsetOf(buf) {      // skip the silence an encoder may have put in front
     const d = buf.getChannelData(0), n = Math.min(d.length, Math.floor(buf.sampleRate * 0.3));
     let peak = 0;
@@ -206,16 +211,15 @@
   }
   function loadSamples() {
     if (bank.loading || !ctx || typeof fetch !== "function") return bank.loading;
-    const base = new URL("samples/", document.baseURI).href;
-    const get = (file) => fetch(base + file).then((r) => { if (!r.ok) throw new Error(file); return r.arrayBuffer(); })
-                                            .then((a) => new Promise((ok, no) => ctx.decodeAudioData(a, ok, no)));
-    bank.loading = fetch(base + "manifest.json").then((r) => r.json()).then(async (M) => {
+    const get = fetchBuf;
+    bank.loading = fetch(sampleBase() + "manifest.json").then((r) => r.json()).then(async (M) => {
       const jobs = [];
       for (const [name, b] of Object.entries(M.beds)) jobs.push([0, () => get(b.file).then((buf) => { bank.beds[name] = { buf }; })]);
       for (const [g, list] of Object.entries(M.loops)) list.forEach((e) => jobs.push([1, () => get(e.file).then((buf) => {
         (bank.loops[g] = bank.loops[g] || []).push({ buf, root: e.root });
       })]));
-      for (const [g, list] of Object.entries(M.oneshots)) list.forEach((e) => jobs.push([2, () => get(e.file).then((buf) => {
+      for (const [g, list] of Object.entries(M.oneshots)) if (LAZY.has(g)) bank.lazy[g] = list.map((e) => ({ ...e, buf: null, used: 0 }));
+      for (const [g, list] of Object.entries(M.oneshots)) if (!LAZY.has(g)) list.forEach((e) => jobs.push([2, () => get(e.file).then((buf) => {
         (bank.one[g] = bank.one[g] || []).push({ buf, root: e.root, off: onsetOf(buf) });
       })]));
       jobs.sort((a, b) => a[0] - b[0]);
@@ -237,7 +241,7 @@
   }
   // a one-shot sample; pitched groups play `midi`, others take `rate` (and `pick` for a variation)
   function sample(g, { midi = null, rate = 1, pick = null, t = now(), gain = 0.2, pan = 0, dry: d = 0.7, rev = 0.4, del = 0, group = "sfx",
-                       lp = 0, hp = 0, dur = 0, fade = 0.3, at = 0, dest = null } = {}) {
+                       lp = 0, hp = 0, dur = 0, fade = 0.3, at = 0, dest = null, attack = 0, echo = 0 } = {}) {
     const list = bank.one[g];
     if (!list || !list.length) return null;
     const s = midi !== null ? nearest(list, midi) : list[pick !== null ? pick % list.length : (Math.random() * list.length) | 0];
@@ -246,11 +250,14 @@
     let node = src;
     if (hp) { const f = ctx.createBiquadFilter(); f.type = "highpass"; f.frequency.value = hp; node = node.connect(f); }
     if (lp) { const f = ctx.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = lp; f.Q.value = 0.5; node = node.connect(f); }
-    const g2 = ctx.createGain(); g2.gain.value = gain; node.connect(g2);
+    const g2 = ctx.createGain(); node.connect(g2);
+    if (attack) { g2.gain.setValueAtTime(0, t); g2.gain.linearRampToValueAtTime(gain, t + attack); } else g2.gain.value = gain;
     const o = dest ? (g2.connect(dest), g2) : out(g2, { pan, dry: d, rev, del, group });
+    let e = null;
+    if (echo) { e = ctx.createGain(); e.gain.value = echo; g2.connect(e).connect(echoIn); }
     src.start(t, (s.off || 0) + at);
-    if (dur) { g2.gain.setValueAtTime(gain, t + dur); g2.gain.setTargetAtTime(0, t + dur, fade / 3); src.stop(t + dur + fade * 2); }
-    src.onended = () => o.disconnect();
+    if (dur) { g2.gain.setValueAtTime(gain, t + Math.max(dur, attack)); g2.gain.setTargetAtTime(0, t + Math.max(dur, attack), fade / 3); src.stop(t + Math.max(dur, attack) + fade * 2.5); }
+    src.onended = () => { o.disconnect(); if (e) e.disconnect(); };
     return { src, gain: g2, out: o };
   }
   // a sustained, looping sample at a pitch; returns a voice whose pitch can glide
@@ -616,7 +623,7 @@
   }
   // felt piano: a soft, dark note now and then, sometimes with its fifth or octave
   function piano(t) {
-    if (!musicOn || radio.playing) return;
+    if (!musicOn || radio.playing || now() < phraseUntil) return;
     const m = chordNote(ROOT + 24, 8), pan = rand(-0.5, 0.5), other = m + (Math.random() < 0.5 ? 7 : 12), two = Math.random() < 0.35;
     if (sample("piano", { midi: m, t, gain: 0.22, pan, lp: 1700, dry: 0.5, rev: 0.75, del: 0.25, group: "music" })) {
       if (two) sample("piano", { midi: other, t: t + rand(0.08, 0.3), gain: 0.13, pan: -pan, lp: 1900, dry: 0.45, rev: 0.8, del: 0.25, group: "music" });
@@ -640,6 +647,192 @@
   }
   function seaSwell(t) {                                                       // the ocean drum rolls once, slowly
     sample("oceandrum", { t, rate: rand(0.6, 0.75), gain: 0.16, lp: 1400, pan: rand(-0.5, 0.5), dry: 0.5, rev: 0.7, group: "bed", dur: rand(8, 12), fade: 4 });
+  }
+
+  // ---------- the storm: thunder far off ----------
+  // Real thunder (samples/thunder_*.m4a: cut from field recordings with slow fades either side and
+  // matched in low-end loudness) placed in the distance. Distance does everything a real one does:
+  // the further it is the later it arrives after the flash, the darker it gets (two lowpasses, so the
+  // crack is gone and only the roll is left), the slower and bigger it sounds (played a little slow)
+  // and the more of it is hall. A sub swell follows the roll so it's felt more than heard. While a
+  // storm is near, rain on a far roof joins the rain on the glass and the wind leans in a little.
+  let stormLevel = 0, stormBed = null, lastThunders = [];
+  function thunderTake(kindWanted) {
+    const list = bank.lazy.thunder;
+    if (!list || !list.length) return null;
+    let ready = list.filter((e) => e.buf && !lastThunders.includes(e));
+    if (!ready.length) ready = list.filter((e) => e.buf);                      // few decoded yet: a repeat beats silence
+    const pref = ready.filter((e) => !kindWanted || e.kind === kindWanted);
+    const pick = (pref.length ? pref : ready)[(Math.random() * (pref.length || ready.length)) | 0] || null;
+    // keep a handful decoded (they're long), and fetch another one for next time
+    const cold = list.filter((e) => !e.buf && !e.loading);
+    if (cold.length) {
+      const e = cold[(Math.random() * cold.length) | 0];
+      e.loading = fetchBuf(e.file).then((b) => {
+        e.buf = b; e.loading = null; e.used = performance.now();
+        const warm = list.filter((x) => x.buf).sort((a, b2) => a.used - b2.used);
+        while (warm.length > 5) { const old = warm.shift(); if (old !== e) old.buf = null; }
+      }).catch(() => { e.loading = null; });
+    }
+    if (pick) { pick.used = performance.now(); lastThunders = [pick, ...lastThunders].slice(0, 3); }
+    return pick;
+  }
+  function thunderAt(t, { dist = 0.7, power = 0.6, pan = 0 } = {}) {
+    const take = thunderTake(dist < 0.5 && Math.random() < 0.6 ? "crack" : dist > 0.75 ? "roll" : null);
+    if (!take) return false;
+    const near = 1 - dist;                                                     // 0 far … 0.75 close
+    const rate = rand(0.8, 0.95) - 0.1 * dist;
+    const src = ctx.createBufferSource(); src.buffer = take.buf; src.playbackRate.value = rate;
+    const lp1 = ctx.createBiquadFilter(), lp2 = ctx.createBiquadFilter(), hp = ctx.createBiquadFilter(), body = ctx.createBiquadFilter();
+    lp1.type = lp2.type = "lowpass"; lp1.Q.value = lp2.Q.value = 0.5;
+    lp1.frequency.value = 260 + 1500 * Math.pow(near, 1.4); lp2.frequency.value = lp1.frequency.value * 1.4;
+    hp.type = "highpass"; hp.frequency.value = 28; hp.Q.value = 0.6;
+    body.type = "lowshelf"; body.frequency.value = 110; body.gain.value = 3 + 3 * dist;   // far thunder is mostly weight
+    const amp = ctx.createGain(), level = power * (0.1 + 0.21 * near);
+    const len = (take.buf.duration - (take.off || 0)) / rate;
+    amp.gain.setValueAtTime(0, t); amp.gain.linearRampToValueAtTime(level, t + 0.35 + 0.5 * dist);   // never a hard edge
+    amp.gain.setValueAtTime(level, t + len - 3); amp.gain.linearRampToValueAtTime(0, t + len);
+    src.connect(hp).connect(lp1).connect(lp2).connect(body).connect(amp);
+    const o = out(amp, { pan: clamp(pan * 0.7, -0.7, 0.7), group: "bed", dry: 0.75 - 0.35 * dist, rev: 0.45 + 0.4 * dist, del: 0 });
+    src.start(t); src.stop(t + len + 0.1);
+    src.onended = () => o.disconnect();
+    // the pressure under it: a sub swell that peaks with the roll
+    const peak = t + Math.min(len * 0.5, (take.peakAt || 2) / rate), sub = noise(true, t), slp = ctx.createBiquadFilter(), sg = ctx.createGain();
+    slp.type = "lowpass"; slp.frequency.value = 55; slp.Q.value = 0.7;
+    sg.gain.setValueAtTime(0, t); sg.gain.linearRampToValueAtTime(0.5 * level, peak); sg.gain.setTargetAtTime(0, peak + 0.2, 1.4 + dist);
+    sub.connect(slp).connect(sg);
+    const so = out(sg, { pan: pan * 0.3, group: "bed", dry: 1, rev: 0.2 });
+    sub.stop(peak + 9); sub.onended = () => so.disconnect();
+    return true;
+  }
+  function setStorm(level) {
+    stormLevel = clamp(level, 0, 1);
+    if (!ctx || !started || testing) return;
+    const t = now();
+    if (stormLevel > 0.02 && bank.lazy.thunder && !bank.lazy.thunder.some((e) => e.buf || e.loading)) for (let k = 0; k < 3; k++) thunderTake(null);   // warm a few takes
+    if (!stormBed && upgraded && bank.beds.rain && stormLevel > 0.02) {       // rain on a far roof, under the rain on the glass
+      stormBed = bedLayer("rain", { gain: 0, rate: 0.9, hp: 260, lp: 2200, seg: 16, xf: 6, dry: 0.45, rev: 0.65 });
+      if (stormBed) stormBed.ensure(t + 10);
+    }
+    if (stormBed) stormBed.fader.gain.setTargetAtTime(0.2 * stormLevel * stormLevel, t, 5);
+    for (const b of beds) {
+      if (b === stormBed) continue;
+      if (b.name === "rain") b.fader.gain.setTargetAtTime(b.gain * (1 + 0.7 * stormLevel), t, 5);
+      if (b.name === "wind") { b.fader.gain.setTargetAtTime(b.gain * (1 + 0.5 * stormLevel), t, 6); b.lpf.frequency.setTargetAtTime(3500 + 1500 * stormLevel, t, 6); }
+    }
+  }
+
+  // ---------- melodies in the void: piano, violin, flute ----------
+  // Now and then an instrument plays a short phrase over the room: the felt piano, a violin or a
+  // flute. Each phrase is a little melody built on the chord in force: a contour (an arch, a sigh, a
+  // question), a rhythm with some rubato, a swell toward its highest note and a fall away from it,
+  // strong beats landing on chord tones and the last note resolving. Lots of hall and the dark echo,
+  // so it hangs in the void. Sometimes another instrument answers, a little higher or lower.
+  const LYDIAN = SCALE.map((iv) => (ROOT + iv) % 12);
+  const CONTOURS = [[0, 1, 2, 1, 0], [0, 2, 1, 3, 2, 1, 0], [3, 2, 1, 0, -1], [0, 1, 2, 4, 3], [0, -1, 1, 2, 4, 2], [2, 1, 0, 1, 3, 2, 0],
+                    [0, 2, 4, 3, 1], [4, 3, 2, 3, 1, 0], [0, 1, 0, 2, 1, 3, 2]];
+  const RHYTHMS = [[1, 0.5, 0.5, 1, 2], [0.5, 0.5, 1, 0.5, 0.5, 1, 2], [1.5, 0.5, 1, 1, 2.5], [0.75, 0.25, 1, 1, 1, 2],
+                   [1, 1, 0.5, 0.5, 1, 2.5], [2, 1, 1, 0.5, 0.5, 2], [1, 0.5, 1.5, 1, 1, 0.5, 2]];
+  const VOICES = {
+    piano: { range: [62, 84], tempo: [62, 76] },
+    violin: { range: [67, 88], tempo: [54, 66] },
+    flute: { range: [72, 93], tempo: [60, 74] },
+  };
+  let phraseUntil = 0;
+  function scaleNotes(lo, hi) { const r = []; for (let m = lo; m <= hi; m++) if (LYDIAN.includes(m % 12)) r.push(m); return r; }
+  function compose(voice, { from = null, shift = 0 } = {}) {
+    const V = VOICES[voice], sc = scaleNotes(V.range[0] - 4, V.range[1] + 4), c = chord();
+    const tones = new Set([...c.triad, ...c.ext].map((iv) => (ROOT + c.root + iv) % 12));
+    const shape = from ? from.shape.map((v) => v + shift) : CONTOURS[(Math.random() * CONTOURS.length) | 0];
+    const rhythm = from ? from.rhythm : RHYTHMS.filter((r) => r.length >= shape.length)[(Math.random() * 4) | 0] || RHYTHMS[0];
+    // start on a chord tone low in the range, so the contour has room to climb
+    const starts = sc.filter((m) => tones.has(m % 12) && m >= V.range[0] && m <= V.range[0] + 9);
+    const base = sc.indexOf(starts[(Math.random() * starts.length) | 0] ?? sc[4]);
+    let beat = 0;
+    const notes = shape.map((step, k) => {
+      let i = clamp(base + step, 0, sc.length - 1);
+      const strong = beat % 1 === 0, last = k === shape.length - 1;
+      if ((strong || last) && !tones.has(sc[i] % 12)) {                         // lean onto the chord on the beat
+        const up = sc.slice(i).findIndex((m) => tones.has(m % 12)), dn = sc.slice(0, i + 1).reverse().findIndex((m) => tones.has(m % 12));
+        if (up >= 0 && (dn < 0 || up <= dn) && up <= 1) i += up; else if (dn >= 0 && dn <= 1) i -= dn;
+      }
+      const dur = rhythm[k % rhythm.length];
+      const n = { m: sc[i], beat, dur: last ? Math.max(dur, 2) : dur };
+      beat += dur;
+      return n;
+    });
+    const hi = Math.max(...notes.map((n) => n.m)), lo = Math.min(...notes.map((n) => n.m));
+    notes.forEach((n, k) => { n.v = (0.6 + 0.4 * (hi === lo ? 1 : (n.m - lo) / (hi - lo))) * (0.75 + 0.25 * Math.sin(Math.PI * (k + 0.5) / notes.length)) * rand(0.9, 1.05); });
+    return { shape, rhythm, notes };
+  }
+  function playPhrase(voice, phrase, t, pan) {
+    const V = VOICES[voice], spb = 60 / rand(V.tempo[0], V.tempo[1]);
+    let at = t;
+    const times = phrase.notes.map((n, k) => { const x = at; at += n.dur * spb * (k === phrase.notes.length - 1 ? 1.25 : rand(0.92, 1.1)); return x; });
+    const end = at;
+    phrase.notes.forEach((n, k) => {
+      const t0 = times[k] + rand(-0.015, 0.015), len = (times[k + 1] ?? end) - times[k];
+      if (voice === "piano") {
+        if (!sample("piano", { midi: n.m, t: t0, gain: 0.3 * n.v, lp: 1400 + 1500 * n.v, pan, dry: 0.42, rev: 0.82, del: 0.3, echo: 0.12, group: "music" }))
+          pluck(n.m - 12, { t: t0, gain: 0.07 * n.v, pan, bright: 0.2, dry: 0.4, rev: 0.8, del: 0.3, group: "music" });
+      } else if (voice === "violin") {
+        sample("violin", { midi: n.m, t: t0, gain: 0.5 * n.v, attack: 0.09 + 0.05 * Math.random(), lp: 3600, hp: 170, pan, dry: 0.3, rev: 0.92, del: 0.25, echo: 0.2,
+                           group: "music", dur: len + 0.14, fade: k === phrase.notes.length - 1 ? 1.4 : 0.45 });
+      } else {
+        sample("flute", { midi: n.m, t: t0, gain: 0.38 * n.v, attack: 0.05, lp: 5200, hp: 240, pan, dry: 0.3, rev: 0.88, del: 0.4, echo: 0.28,
+                          group: "music", dur: Math.min(len + 0.1, 1.9), fade: k === phrase.notes.length - 1 ? 1.1 : 0.35 });
+      }
+    });
+    // the piano's left hand: the chord's root (and its fifth) under the start and the middle of the phrase
+    if (voice === "piano") {
+      const c = chord(), r = into(ROOT + c.root + 12, 41, 52);
+      sample("piano", { midi: r, t: t - 0.03, gain: 0.18, lp: 1100, pan: -pan * 0.5, dry: 0.45, rev: 0.8, del: 0.2, group: "music" });
+      if (phrase.notes.length > 4) sample("piano", { midi: r + 7, t: times[(phrase.notes.length / 2) | 0] - 0.02, gain: 0.12, lp: 1100, pan: -pan * 0.5, dry: 0.45, rev: 0.8, del: 0.2, group: "music" });
+    }
+    return end;
+  }
+  function melody(t) {
+    if (!musicOn || radio.playing || !bank.ready) return;
+    const pick = Math.random(), voice = pick < 0.46 ? "piano" : pick < 0.74 ? "violin" : "flute";
+    if (voice !== "piano" && !has(voice)) return;
+    const pan = voice === "violin" ? rand(-0.55, -0.15) : voice === "flute" ? rand(0.15, 0.55) : rand(-0.3, 0.3);
+    const phrase = compose(voice), end = playPhrase(voice, phrase, t, pan);
+    phraseUntil = end + 2;
+    if (Math.random() < 0.45) {                                              // an answer from someone else in the void
+      const other = ["piano", "violin", "flute"].filter((v) => v !== voice && (v === "piano" || has(v)))[(Math.random() * 2) | 0];
+      if (other) {
+        const ans = compose(other, { from: Math.random() < 0.5 ? phrase : null, shift: Math.random() < 0.5 ? 2 : -1 });
+        phraseUntil = playPhrase(other, ans, end + rand(0.8, 2.2), -pan * 0.8) + 2;
+      }
+    }
+  }
+
+  // ---------- the switch between views: the swarm lifts, flies and lands ----------
+  function morphAt(t, { to = "cloud", seconds = 2.7 } = {}) {
+    const c = chord(), S = seconds;
+    duck("tonal", -2.5, 0.3, S * 0.6, 2.5, t); duck("bed", -1.5, 0.3, S * 0.6, 2.5, t);
+    whoosh(t, 280, 2200, S * 0.5, 0.014, -0.35, 0.7);                        // lift-off…
+    whoosh(t + S * 0.38, 2400, 420, S * 0.62, 0.011, 0.35, 0.7);              // …and settling
+    // a harp glissando through the chord while they fly: up into the city, down into the tree, a turn for the cloud
+    let steps = ladder(ROOT + (to === "tree" ? 33 : 26), 11, c);
+    if (to === "tree") steps = steps.reverse();
+    if (to === "cloud") steps = [...steps.slice(0, 6), ...steps.slice(0, 5).reverse()];
+    steps.forEach((m, k) => harp(m, { t: t + 0.12 + k * (S * 0.5 / steps.length), gain: 0.04 * (0.65 + 0.35 * Math.sin(Math.PI * k / steps.length)),
+                                      pan: -0.7 + (1.4 * k) / steps.length, bright: 0.45, rev: 0.7, del: 0.3 }));
+    // landings: a scatter of kalimba / glass across the stagger
+    for (let k = 0; k < 7; k++) {
+      const at = t + S * (0.42 + 0.075 * k) + rand(-0.04, 0.04), m = chordNote(ROOT + 43, 7), p = rand(-0.8, 0.8);
+      if (!sample("kalimba", { midi: m, t: at, gain: 0.03, pan: p, dry: 0.4, rev: 0.8, del: 0.35 })) glassTick(m, { t: at, gain: 0.015, pan: p, rev: 0.7, del: 0.3 });
+    }
+    // arrival: each view has its own landing
+    const end = t + S * 0.95;
+    if (to === "city") { thump(end - 0.1, 0.05); sample("glock", { midi: into(ROOT + c.root + 48, 84, 100), t: end, gain: 0.04, rev: 0.7, del: 0.35, dur: 1.2, fade: 0.5 }); }
+    else if (to === "tree") sample("windchime", { t: end - 0.4, rate: rand(0.95, 1.1), gain: 0.07, hp: 1800, rev: 0.9, del: 0.3, dur: 3, fade: 1.5 });
+    else { const inhale = bank.one.inhale && bank.one.inhale[1]; if (inhale) sample("inhale", { pick: 1, t: end - 1.1, gain: 0.07, hp: 600, rev: 0.7, at: Math.max(0, inhale.buf.duration - 1.2) }); }
+    [0, 7, 14].forEach((iv, i) => {
+      if (!sample("chime", { midi: into(ROOT + c.root + 24 + iv, 72, 92), t: end + i * 0.07, gain: 0.045 / (1 + i * 0.4), pan: (i - 1) * 0.4, rev: 0.85, del: 0.35 }))
+        bell(ROOT + c.root + 12 + iv, { t: end + i * 0.07, gain: 0.025 / (1 + i * 0.4), pan: (i - 1) * 0.4, decay: 3, index: 2, rev: 0.85, del: 0.35 });
+    });
   }
 
   // ---------- the radio: real tracker and chiptune music, heard from another room ----------
@@ -838,14 +1031,310 @@
     };
   }
 
+  // ---------- FastTracker 2 modules (.xm): the keygen sound ----------
+  // Most keygen and cracktro music was tracked in FastTracker 2. This plays the files as they are:
+  // any number of channels, instruments with key maps, volume / panning envelopes with sustain and
+  // loops, fadeout, auto-vibrato, 8- and 16-bit samples with forward and ping-pong loops, the
+  // volume column, linear and Amiga frequency tables, and the effects tunes of that era lean on.
+  const XM_SR = 44100;
+  function parseXM(ab) {
+    const u8 = new Uint8Array(ab), dv = new DataView(ab), L = u8.length;
+    const str = (o, n) => String.fromCharCode(...u8.subarray(o, o + n)).replace(/\0[\s\S]*$/, "").trim();
+    if (str(0, 17) !== "Extended Module:") throw new Error("not an XM module");
+    const hsize = dv.getUint32(60, true), songLen = dv.getUint16(64, true), nch = dv.getUint16(68, true);
+    const npat = dv.getUint16(70, true), nins = dv.getUint16(72, true), flags = dv.getUint16(74, true);
+    const order = [...u8.subarray(80, 80 + 256)].slice(0, songLen);
+    let p = 60 + hsize;
+    const patterns = [];
+    for (let i = 0; i < npat && p + 9 <= L; i++) {
+      const plen = dv.getUint32(p, true), rows = dv.getUint16(p + 5, true) || 64, psize = dv.getUint16(p + 7, true);
+      p += plen;
+      const cells = new Uint8Array(rows * nch * 5), end = Math.min(L, p + psize);
+      for (let k = 0, q = p; k < rows * nch && q < end; k++) {
+        const b = u8[q++], o = k * 5;
+        if (b & 0x80) {
+          if (b & 1) cells[o] = u8[q++];
+          if (b & 2) cells[o + 1] = u8[q++];
+          if (b & 4) cells[o + 2] = u8[q++];
+          if (b & 8) cells[o + 3] = u8[q++];
+          if (b & 16) cells[o + 4] = u8[q++];
+        } else { cells[o] = b; cells[o + 1] = u8[q++]; cells[o + 2] = u8[q++]; cells[o + 3] = u8[q++]; cells[o + 4] = u8[q++]; }
+      }
+      p += psize;
+      patterns.push({ rows, cells });
+    }
+    const insts = [];
+    for (let i = 0; i < nins && p + 29 <= L; i++) {
+      const isz = dv.getUint32(p, true), ns = dv.getUint16(p + 27, true);
+      const inst = { samples: [], keymap: new Uint8Array(96), vol: null, pan: null, fadeout: 0, vib: null, drum: false };
+      let shsz = 40;
+      if (ns > 0 && p + 241 <= L) {
+        shsz = dv.getUint32(p + 29, true) || 40;
+        inst.keymap = u8.slice(p + 33, p + 129);
+        const env = (o, n, sus, ls, le, type) => {
+          if (!(type & 1) || n < 1) return null;
+          const pts = [];
+          for (let k = 0; k < Math.min(12, n); k++) pts.push([dv.getUint16(o + k * 4, true), dv.getUint16(o + k * 4 + 2, true)]);
+          return { pts, sus: type & 2 ? sus : -1, loop: type & 4 ? [ls, le] : null };
+        };
+        inst.vol = env(p + 129, u8[p + 225], u8[p + 227], u8[p + 228], u8[p + 229], u8[p + 233]);
+        inst.pan = env(p + 177, u8[p + 226], u8[p + 230], u8[p + 231], u8[p + 232], u8[p + 234]);
+        inst.vib = { sweep: u8[p + 236], depth: u8[p + 237], rate: u8[p + 238] };
+        inst.fadeout = dv.getUint16(p + 239, true);
+      }
+      p += isz;
+      const hdrs = [];
+      for (let s = 0; s < ns && p + s * shsz + 18 <= L; s++) {
+        const o = p + s * shsz;
+        hdrs.push({ len: dv.getUint32(o, true), ls: dv.getUint32(o + 4, true), ll: dv.getUint32(o + 8, true), vol: Math.min(64, u8[o + 12]),
+                    fine: dv.getInt8(o + 13), type: u8[o + 14], pan: u8[o + 15], rel: dv.getInt8(o + 16) });
+      }
+      p += ns * shsz;
+      for (const h of hdrs) {
+        const is16 = !!(h.type & 16), n = Math.max(0, Math.min(is16 ? h.len >> 1 : h.len, is16 ? (L - p) >> 1 : L - p)), data = new Float32Array(n);
+        let old = 0;
+        if (is16) for (let k = 0; k < n; k++) { old = (old + dv.getInt16(p + k * 2, true)) << 16 >> 16; data[k] = old / 32768; }
+        else for (let k = 0; k < n; k++) { old = (old + dv.getInt8(p + k)) << 24 >> 24; data[k] = old / 128; }
+        p += h.len;
+        inst.samples.push({ data, loop: h.type & 3, ls: is16 ? h.ls >> 1 : h.ls, ll: is16 ? h.ll >> 1 : h.ll, vol: h.vol, fine: h.fine, pan: h.pan, rel: h.rel, buf: null });
+      }
+      insts.push(inst);
+    }
+    // drums hit one or two pitches across the whole song; instruments move around (the lights care)
+    const seen = insts.map(() => new Set()), uses = insts.map(() => 0);
+    for (const pat of patterns) for (let o = 0; o < pat.cells.length; o += 5) {
+      const n = pat.cells[o], ins = pat.cells[o + 1];
+      if (ins && n && n < 97 && insts[ins - 1]) { seen[ins - 1].add(n); uses[ins - 1]++; }
+    }
+    insts.forEach((ins, i) => { ins.drum = seen[i].size <= 2 && uses[i] >= 6; });
+    return { title: str(17, 20), nch, songLen, order, patterns, insts, linear: !!(flags & 1),
+             speed: dv.getUint16(76, true) || 6, bpm: dv.getUint16(78, true) || 125, xm: true };
+  }
+  // a sample as an AudioBuffer; a ping-pong loop is unrolled (forward then backward) so it loops plainly
+  function xmBuffer(s) {
+    if (s.buf !== null) return s.buf;
+    const n = s.data.length;
+    if (n < 2) return (s.buf = false);
+    const ls = Math.min(s.ls, n), ll = Math.min(s.ll, n - ls), loop = s.loop && ll > 2 ? s.loop : 0;
+    const len = loop === 2 ? ls + ll * 2 : loop ? ls + ll : n;
+    const b = ctx.createBuffer(1, len, XM_SR), d = b.getChannelData(0);
+    d.set(s.data.subarray(0, loop ? ls + ll : n));
+    if (loop === 2) for (let k = 0; k < ll; k++) d[ls + ll + k] = s.data[ls + ll - 1 - k];
+    s.bufLoop = loop ? [ls / XM_SR, len / XM_SR] : null;
+    return (s.buf = b);
+  }
+  function xmPlayer(mod, bus, t0, { maxSeconds = 600, onNote = null } = {}) {
+    const N = mod.nch, chans = [];
+    const spread = N <= 4 ? 0.6 : 0.5;                                          // pan law: wide, but kind on headphones
+    for (let i = 0; i < N; i++) {
+      const pan = ctx.createStereoPanner(); pan.connect(bus);
+      chans.push({ pan, src: null, g: null, inst: null, smp: null, period: 0, target: 0, vol: 0, panv: 128, keyOn: false, ev: 0, ep: 0, fade: 65536,
+                   vib: 0, vibSpd: 0, vibDep: 0, trem: 0, tremSpd: 0, tremDep: 0, av: 0, avT: 0, fx: 0, prm: 0, vc: 0, mem: {}, pend: null, delay: -1, rc: 0,
+                   ov: -1, op: -2, or: -1 });
+    }
+    let speed = mod.speed, bpm = mod.bpm, gvol = 64, pos = 0, row = 0, tick = 0, rowDelay = 0, jump = null, next = t0, done = false, loopRow = 0, loopCnt = 0;
+    const end = t0 + maxSeconds;
+    const periodOf = (note, fine) => (mod.linear ? 7680 - note * 64 - fine / 2 : 1712 * Math.pow(2, -(note - 48 + fine / 128) / 12));
+    const freqOf = (per) => (mod.linear ? 8363 * Math.pow(2, (4608 - per) / 768) : (8363 * 1712) / Math.max(1, per));
+    const envAt = (env, x) => {
+      const P = env.pts;
+      if (x <= P[0][0]) return P[0][1];
+      for (let k = 1; k < P.length; k++) if (x < P[k][0]) { const a = P[k - 1], b = P[k]; return a[1] + ((b[1] - a[1]) * (x - a[0])) / Math.max(1, b[0] - a[0]); }
+      return P[P.length - 1][1];
+    };
+    const stepEnv = (env, x, on) => {
+      if (on && env.sus >= 0 && env.pts[env.sus] && x === env.pts[env.sus][0]) return x;   // hold at the sustain point while the key is down
+      x++;
+      if (env.loop && env.pts[env.loop[1]] && env.pts[env.loop[0]] && x >= env.pts[env.loop[1]][0]) x = env.pts[env.loop[0]][0];
+      return x;
+    };
+    const sine = (p) => SINE[p & 31] * (p & 32 ? -1 : 1);
+    function keyOff(c) { c.keyOn = false; if (!c.inst || !c.inst.vol) c.vol = 0; }
+    function trigger(c, i, t, offset = 0) {
+      if (c.src) { c.g.gain.cancelScheduledValues(t); c.g.gain.setTargetAtTime(0, t, 0.003); c.src.stop(t + 0.03); c.src = null; }
+      const s = c.smp, b = s && xmBuffer(s);
+      if (!b || (!s.bufLoop && offset >= b.length)) return;
+      const src = ctx.createBufferSource(), g = ctx.createGain();
+      src.buffer = b;
+      if (s.bufLoop) { src.loop = true; src.loopStart = s.bufLoop[0]; src.loopEnd = s.bufLoop[1]; }
+      g.gain.setValueAtTime(0, t);
+      src.connect(g).connect(c.pan);
+      src.start(t, Math.min(offset, b.length - 1) / XM_SR);
+      src.onended = () => g.disconnect();
+      c.src = src; c.g = g; c.ov = -1; c.or = -1;
+      if (onNote && c.vol) onNote(i % 4, c.vol / 64, t, !!(c.inst && c.inst.drum));
+    }
+    function applyNote(c, i, t, note, ins, vc, fx, prm) {
+      const porta = fx === 3 || fx === 5 || vc >> 4 === 0xf;
+      if (ins && mod.insts[ins - 1]) c.inst = mod.insts[ins - 1];
+      if (note === 97) keyOff(c);
+      else if (note > 0 && note < 97 && c.inst) {
+        const s = c.inst.samples[c.inst.keymap[note - 1]];
+        if (s) {
+          const real = note - 1 + s.rel;
+          if (porta && c.src) c.target = periodOf(real, s.fine);                // glide there instead of striking it
+          else {
+            c.smp = s; c.period = c.target = periodOf(real, s.fine);
+            if (fx === 9 && prm) c.mem.off = prm;
+            trigger(c, i, t, fx === 9 ? (c.mem.off || 0) * 256 : 0);
+            c.keyOn = true; c.ev = 0; c.ep = 0; c.fade = 65536; c.av = 0; c.avT = 0; c.vib = 0; c.trem = 0;
+          }
+        }
+      }
+      if (ins && c.smp && note !== 97) { c.vol = c.smp.vol; c.panv = c.smp.pan; c.keyOn = true; c.ev = 0; c.ep = 0; c.fade = 65536; }
+      const vx = vc >> 4, vy = vc & 15;                                         // the volume column, on the row
+      if (vc >= 0x10 && vc <= 0x50) c.vol = vc - 0x10;
+      else if (vx === 0x8) c.vol = Math.max(0, c.vol - vy);
+      else if (vx === 0x9) c.vol = Math.min(64, c.vol + vy);
+      else if (vx === 0xa) c.vibSpd = vy;
+      else if (vx === 0xb) { if (vy) c.vibDep = vy; }
+      else if (vx === 0xc) c.panv = vy * 17;
+      else if (vx === 0xf) { if (vy) c.mem.porta = vy * 16; }
+    }
+    const volSlide = (c) => { const m = c.mem.vs || 0; c.vol = m >> 4 ? Math.min(64, c.vol + (m >> 4)) : Math.max(0, c.vol - (m & 15)); };
+    const tonePorta = (c) => { const sp = (c.mem.porta || 0) * 4; if (c.target && c.period) { const d = c.target - c.period; c.period += Math.sign(d) * Math.min(sp, Math.abs(d)); } };
+    const RETRIG = [(v) => v, (v) => v - 1, (v) => v - 2, (v) => v - 4, (v) => v - 8, (v) => v - 16, (v) => (v * 2) / 3, (v) => v / 2,
+                    (v) => v, (v) => v + 1, (v) => v + 2, (v) => v + 4, (v) => v + 8, (v) => v + 16, (v) => (v * 3) / 2, (v) => v * 2];
+    function doRow(t) {
+      const pat = mod.patterns[mod.order[pos]];
+      if (!pat) { done = true; return; }
+      if (row >= pat.rows) row = 0;
+      for (let i = 0; i < N; i++) {
+        const c = chans[i], o = (row * N + i) * 5, C = pat.cells;
+        const note = C[o], ins = C[o + 1], vc = C[o + 2], fx = C[o + 3], prm = C[o + 4], x = prm >> 4, y = prm & 15;
+        c.fx = fx; c.prm = prm; c.vc = vc; c.pend = null; c.delay = -1;
+        if (fx === 0xe && x === 0xd && y) { c.delay = y; c.pend = { note, ins, vc }; }
+        else applyNote(c, i, t, note, ins, vc, fx, prm);
+        switch (fx) {
+          case 0x1: if (prm) c.mem.up = prm; break;
+          case 0x2: if (prm) c.mem.dn = prm; break;
+          case 0x3: if (prm) c.mem.porta = prm; break;
+          case 0x4: if (x) c.vibSpd = x; if (y) c.vibDep = y; break;
+          case 0x5: case 0x6: case 0xa: if (prm) c.mem.vs = prm; break;
+          case 0x7: if (x) c.tremSpd = x; if (y) c.tremDep = y; break;
+          case 0x8: c.panv = prm; break;
+          case 0xb: jump = { pos: prm, row: 0 }; break;
+          case 0xc: c.vol = Math.min(64, prm); break;
+          case 0xd: jump = { pos: jump ? jump.pos : pos + 1, row: x * 10 + y }; break;
+          case 0xe:
+            switch (x) {
+              case 0x1: if (y) c.mem.fu = y; c.period = Math.max(1, c.period - (c.mem.fu || 0) * 4); break;
+              case 0x2: if (y) c.mem.fd = y; c.period += (c.mem.fd || 0) * 4; break;
+              case 0x6: if (!y) loopRow = row; else { loopCnt = loopCnt ? loopCnt - 1 : y; if (loopCnt) jump = { pos, row: loopRow, loop: true }; } break;
+              case 0xa: if (y) c.mem.fvu = y; c.vol = Math.min(64, c.vol + (c.mem.fvu || 0)); break;
+              case 0xb: if (y) c.mem.fvd = y; c.vol = Math.max(0, c.vol - (c.mem.fvd || 0)); break;
+              case 0xc: if (!y) c.vol = 0; break;
+              case 0xe: rowDelay = y; break;
+            }
+            break;
+          case 0xf: if (prm) { if (prm < 32) speed = prm; else bpm = prm; } break;
+          case 16: gvol = Math.min(64, prm); break;                                                  // G: global volume
+          case 17: if (prm) c.mem.gvs = prm; break;                                                  // H: global volume slide
+          case 20: if (!prm) keyOff(c); break;                                                       // K: key off
+          case 21: c.ev = prm; c.ep = prm; break;                                                    // L: envelope position
+          case 25: if (prm) c.mem.ps = prm; break;                                                   // P: panning slide
+          case 27: if (x) c.mem.rv = x; if (y) c.mem.rt = y; c.rc = 0; break;                        // R: multi retrigger
+          case 33:                                                                                   // X: extra fine portamento
+            if (x === 1) { if (y) c.mem.xu = y; c.period = Math.max(1, c.period - (c.mem.xu || 0)); }
+            else if (x === 2) { if (y) c.mem.xd = y; c.period += c.mem.xd || 0; }
+            break;
+        }
+      }
+    }
+    function doTick(t, k) {
+      for (let i = 0; i < N; i++) {
+        const c = chans[i], x = c.prm >> 4, y = c.prm & 15, vx = c.vc >> 4, vy = c.vc & 15;
+        if (c.pend && c.delay === k) { applyNote(c, i, t, c.pend.note, c.pend.ins, c.pend.vc, 0, 0); c.pend = null; }
+        if (vx === 0x6) c.vol = Math.max(0, c.vol - vy);
+        else if (vx === 0x7) c.vol = Math.min(64, c.vol + vy);
+        else if (vx === 0xd) c.panv = Math.max(0, c.panv - vy);
+        else if (vx === 0xe) c.panv = Math.min(255, c.panv + vy);
+        else if (vx === 0xf) tonePorta(c);
+        switch (c.fx) {
+          case 0x1: c.period = Math.max(1, c.period - (c.mem.up || 0) * 4); break;
+          case 0x2: c.period += (c.mem.dn || 0) * 4; break;
+          case 0x3: tonePorta(c); break;
+          case 0x5: tonePorta(c); volSlide(c); break;
+          case 0x6: case 0xa: volSlide(c); break;
+          case 0x7: c.trem = (c.trem + c.tremSpd) & 63; break;
+          case 0xe:
+            if (x === 0xc && k === y) c.vol = 0;
+            else if (x === 0x9 && y && k % y === 0) trigger(c, i, t);
+            break;
+          case 17: { const m = c.mem.gvs || 0; gvol = clamp(gvol + (m >> 4 ? m >> 4 : -(m & 15)), 0, 64); break; }
+          case 20: if (k === c.prm) keyOff(c); break;
+          case 25: { const m = c.mem.ps || 0; c.panv = clamp(c.panv + (m >> 4 ? m >> 4 : -(m & 15)), 0, 255); break; }
+          case 27: if (c.mem.rt && ++c.rc >= c.mem.rt) { c.rc = 0; c.vol = clamp(Math.round(RETRIG[c.mem.rv || 0](c.vol)), 0, 64); trigger(c, i, t); } break;
+        }
+      }
+    }
+    // what reaches the speakers on this tick: envelopes, fadeout, vibrato, arpeggio, panning
+    function output(c, t, k) {
+      if (!c.src) return;
+      const I = c.inst;
+      let ev = 64, pv = 32;
+      if (I && I.vol) { ev = envAt(I.vol, c.ev); c.ev = stepEnv(I.vol, c.ev, c.keyOn); }
+      if (I && I.pan) { pv = envAt(I.pan, c.ep); c.ep = stepEnv(I.pan, c.ep, c.keyOn); }
+      if (!c.keyOn && I && I.vol) c.fade = Math.max(0, c.fade - I.fadeout);
+      let vol = c.vol;
+      if (c.fx === 7) vol = clamp(vol + (sine(c.trem) * c.tremDep) / 64, 0, 64);
+      const v = (vol / 64) * (ev / 64) * (c.fade / 65536) * (gvol / 64);
+      let per = c.period;
+      if (c.fx === 4 || c.fx === 6 || c.vc >> 4 === 0xb) { per += (sine(c.vib) * c.vibDep) / 32; if (k) c.vib = (c.vib + c.vibSpd) & 63; }
+      if (c.fx === 0 && c.prm && k) { const s = [0, c.prm >> 4, c.prm & 15][k % 3]; per = mod.linear ? per - s * 64 : per * Math.pow(2, -s / 12); }
+      if (I && I.vib && I.vib.depth && I.vib.rate) {
+        const amt = I.vib.sweep ? Math.min(1, c.avT / I.vib.sweep) : 1;
+        per += Math.sin((c.av * Math.PI * 2) / 256) * I.vib.depth * amt * 0.5;
+        c.av = (c.av + I.vib.rate) & 255; c.avT++;
+      }
+      const rate = freqOf(per) / XM_SR;
+      if (Math.abs(rate - c.or) > 1e-5) { c.src.playbackRate.setValueAtTime(clamp(rate, 0.001, 64), t); c.or = rate; }
+      if (Math.abs(v - c.ov) > 1e-4) { c.g.gain.setTargetAtTime(v, t, 0.002); c.ov = v; }
+      const pn = clamp(c.panv + ((pv - 32) * (128 - Math.abs(c.panv - 128))) / 32, 0, 255), pp = ((pn - 128) / 128) * spread;
+      if (Math.abs(pp - c.op) > 1e-3) { c.pan.pan.setValueAtTime(pp, t); c.op = pp; }
+      if (v < 1e-4 && !c.keyOn && c.fade === 0) { c.src.stop(t + 0.02); c.src = null; }   // faded out for good
+    }
+    return {
+      get done() { return done; },
+      pump(until) {
+        while (!done && next < until) {
+          const k = tick % speed;
+          if (tick === 0) doRow(next); else if (k) doTick(next, k);
+          for (const c of chans) output(c, next, k);
+          const t = next;
+          next += 2.5 / bpm;
+          if (++tick >= speed * (1 + rowDelay)) {
+            tick = 0; rowDelay = 0;
+            if (jump) { if (jump.pos < pos || (jump.pos === pos && !jump.loop && jump.row <= row)) done = true; pos = jump.pos; row = jump.row; jump = null; }
+            else { const pat = mod.patterns[mod.order[pos]]; if (++row >= (pat ? pat.rows : 64)) { row = 0; pos++; } }
+            if (pos >= mod.songLen) done = true;                              // played through: let it go
+          }
+          if (t > end) done = true;
+        }
+        return next;
+      },
+      stop(t, fade = 0.4) {
+        for (const c of chans) if (c.src) { c.g.gain.cancelScheduledValues(t); c.g.gain.setTargetAtTime(0, t, fade / 3); c.src.stop(t + fade * 3); c.src = null; }
+      },
+    };
+  }
+
   const musicBase = () => new URL("music/", document.baseURI).href;
   async function radioList() {
     if (!radio.list) radio.list = await fetch(musicBase() + "playlist.json").then((r) => r.json()).catch(() => []);
     return radio.list;
   }
-  async function loadMod(file) {
-    if (!radio.mods.has(file)) radio.mods.set(file, parseMod(await fetch(musicBase() + file).then((r) => r.arrayBuffer())));
-    return radio.mods.get(file);
+  // a module from the bundle, or (for scene classics whose license doesn't allow bundling them) fetched
+  // from The Mod Archive by the local server on first play and kept in the user's cache
+  async function loadModule(entry) {
+    const key = entry.remote ? "remote:" + entry.remote : entry.file;
+    if (!radio.mods.has(key)) {
+      const r = await fetch(musicBase() + (entry.remote ? "remote/" + entry.remote : entry.file));
+      if (!r.ok) throw new Error(`${entry.title}: ${r.status}`);
+      const ab = await r.arrayBuffer();
+      radio.mods.set(key, entry.file.endsWith(".xm") ? parseXM(ab) : parseMod(ab));
+    }
+    return radio.mods.get(key);
   }
   // the other room: a closed door (lowpass that breathes a little), the hall and the dark echo
   function farRoom(t0, seconds, gainDb = 0, fadeIn = 9, fadeOut = 10) {
@@ -868,7 +1357,9 @@
   }
   // play one entry of the playlist from t0 for about `seconds` (offline renders pass prefill)
   async function radioPlay(entry, t0, { seconds = rand(120, 210), prefill = false, piano = null } = {}) {
-    const isMod = entry.file.endsWith(".mod");
+    const isMod = entry.file.endsWith(".mod"), isXM = entry.file.endsWith(".xm");
+    const mod = isMod || isXM ? await loadModule(entry) : null;               // (may fail offline: nothing has started yet)
+    if (!prefill) t0 = Math.max(t0, now() + 0.2);
     if (piano === null) piano = isMod && entry.piano !== false && Math.random() < 0.45;   // some modules come through on the felt piano
     piano = piano && isMod && has("piano");
     const room = farRoom(t0, seconds, piano ? entry.pianoGain || 0 : entry.gain || 0);
@@ -876,12 +1367,13 @@
     radio.playing = job;
     if (radio.onTrack && !prefill) radio.onTrack({ title: entry.title, artist: entry.artist, license: entry.license, piano });
     if (!prefill) { duck("tonal", -6, 5, Infinity); duck("bed", -1.5, 5, Infinity); }
-    if (entry.file.endsWith(".mod")) {
-      const mod = await loadMod(entry.file);
-      job.player = modPlayer(mod, room.input, t0, { maxSeconds: seconds, piano, onNote: prefill ? null : (ch, v, t, drum) => radio.notes.push({ ch, v, t, drum }) });
+    if (mod) {
+      const onNote = prefill ? null : (ch, v, t, drum) => radio.notes.push({ ch, v, t, drum });
+      job.player = isXM ? xmPlayer(mod, room.input, t0, { maxSeconds: seconds, onNote }) : modPlayer(mod, room.input, t0, { maxSeconds: seconds, piano, onNote });
       if (prefill) { job.player.pump(t0 + seconds); return job; }
       const tick = () => {
         if (radio.playing !== job) return;
+        if (testing) { radio.timer = setTimeout(tick, 70); return; }
         job.player.pump(now() + 0.3);
         if (job.player.done && now() < job.end - 10) { job.end = room.fadeNow(8); job.player.stop(job.end); }
         if (now() > job.end) { radioEnd(); return; }
@@ -899,7 +1391,7 @@
         el.play().catch(() => radioEnd());
       }, { once: true });
       el.addEventListener("ended", () => { if (radio.playing === job) { job.end = room.fadeNow(3); } }, { once: true });
-      const tick = () => { if (radio.playing !== job) return; if (now() > job.end) { radioEnd(); return; } radio.timer = setTimeout(tick, 500); };
+      const tick = () => { if (radio.playing !== job) return; if (!testing && now() > job.end) { radioEnd(); return; } radio.timer = setTimeout(tick, 500); };
       tick();
     }
     return job;
@@ -931,7 +1423,7 @@
   }
 
   function every(min, max, fn) {
-    const loop = () => { if (!ambientOn) return; fn(now() + 0.05); timers.push(setTimeout(loop, rand(min, max) * 1000)); };
+    const loop = () => { if (!ambientOn) return; if (!testing) fn(now() + 0.05); timers.push(setTimeout(loop, rand(min, max) * 1000)); };
     timers.push(setTimeout(loop, rand(min, max) * 1000));
   }
   function runAmbientTimers() {
@@ -943,6 +1435,7 @@
     every(40, 75, deepBreath);
     every(9, 22, chatter);
     every(3.5, 9, piano);
+    every(24, 55, melody);                                                     // a phrase from the piano, a violin or a flute
     every(45, 100, windChimes);
     every(30, 70, seaSwell);
     every(CHORD_SECONDS, CHORD_SECONDS, changeChord);                          // the harmony clock
@@ -1027,7 +1520,7 @@
   }
 
   // ---------- public API ----------
-  const ready = () => ctx && started && enabled && ctx.state === "running";
+  const ready = () => !testing && ctx && started && enabled && ctx.state === "running";
   let lastHover = 0, lastBit = 0, lastKey = 0, lastSliderNote = -1, lastSlider = 0, bow = null;
 
   const api = {
@@ -1037,6 +1530,7 @@
     get state() { return !enabled ? "muted" : ctx ? ctx.state : "waiting for a click"; },
     get samples() { return bank.ready ? "real" : bank.loading ? "loading" : "synth"; },
     get nowPlaying() { return radio.playing ? radio.playing.entry.title : null; },
+    get thunderTakes() { return (bank.lazy.thunder || []).map((e) => (e.buf ? "ready" : e.loading ? "loading" : "cold")).join(" "); },
     set onTrack(fn) { radio.onTrack = fn; },
     // note-ons from the Amiga modules that have reached the speakers (the lights pulse with them)
     notesDue() {
@@ -1292,6 +1786,19 @@
       if (!added && !removed && !changed) glassTick(ROOT + 36, { t, gain: 0.025, rev: 0.5 });
     },
 
+    // the view changed: the bubbles fly to their new places over `seconds`
+    morph({ to = "cloud", seconds = 2.7 } = {}) { if (ready()) morphAt(now() + 0.02, { to, seconds }); },
+    // how close a storm is, 0..1 (rain and wind lean in with it)
+    storm(level = 0) { setStorm(level); },
+    // lightning just flashed: its thunder arrives `delay` s later. dist 0.25 close … 1 far, power 0..1, pan -1..1
+    thunder({ delay = 4, dist = 0.7, power = 0.6, pan = 0 } = {}) { if (ready()) thunderAt(now() + delay, { dist, power, pan }); },
+    // a melody now, from "piano", "violin" or "flute" (for trying it out)
+    phrase(voice = null) {
+      if (!ready() || !bank.ready) return null;
+      const v = voice || ["piano", "violin", "flute"][(Math.random() * 3) | 0];
+      const ph = compose(v); playPhrase(v, ph, now() + 0.1, 0); return ph.notes.map((n) => n.m);
+    },
+
     ui(on = true) {
       if (!ready()) return;
       glassTick(ROOT + (on ? 43 : 36), { gain: 0.028, rev: 0.25, del: 0.05 });
@@ -1334,17 +1841,27 @@
 
     // renders a scripted stretch of the room offline and reports levels (for tuning; not used live).
     // track: a playlist title / file (or index) to render through the far room.
-    async renderTest(seconds = 16, { sfx: withSfx = true, music: withMusic = true, boot: withBoot = false, ambience = true, track = null, piano = false, real = true, only = null } = {}) {
+    async renderTest(seconds = 16, { sfx: withSfx = true, music: withMusic = true, boot: withBoot = false, ambience = true, track = null, piano = false, real = true, only = null,
+                                     melodies = [], thunders = [], morphTo = null } = {}) {
       if (bank.loading) await bank.loading;
+      if (testing) throw new Error("a render is already running");
+      if (radio.playing && ctx) radioEnd(0.2);              // the live radio would fall behind while the test runs
+      testing = true;
+      try { return await renderOffline(seconds, { withSfx, withMusic, withBoot, ambience, track, piano, real, only, melodies, thunders, morphTo }); }
+      finally { testing = false; }
+    },
+  };
+  async function renderOffline(seconds, { withSfx, withMusic, withBoot, ambience, track, piano, real, only, melodies, thunders, morphTo }) {
+    {
       const sr = 48000, off = new OfflineAudioContext(2, sr * seconds, sr);
       const saved = { ctx, master, dry, revIn, delIn, echoIn, wave, white, pink, groups, meters, pad, strings, beds, started, enabled, sub, chordIx, upgraded, colorFilter, airGain, synthTide, windSrc };
       const savedRadio = { playing: radio.playing, onTrack: radio.onTrack };
       beds = []; upgraded = !real; radio.onTrack = null;
       build(off); started = true; enabled = true;
       master.gain.value = 0.9 * volume;
+      for (const g of ["bed", "tonal"]) groups[g].sends.forEach((s) => s.gain.setValueAtTime(GROUP_LEVELS[g], 0));   // (thunder lives in the bed too)
       if (ambience) {
         startAmbient(0.01);
-        for (const g of ["bed", "tonal"]) groups[g].sends.forEach((s) => s.gain.setValueAtTime(GROUP_LEVELS[g], 0));
         for (const b of beds) { b.fader.gain.setValueAtTime(only && only !== b.name ? 0 : b.gain, 0); b.ensure(seconds); }
         for (let t = 0.5; t < seconds; t += 3) { strings.forEach((s) => gust(s, t)); pad.forEach((v) => breathe(v, t)); }
         crystal(2); crystal(9); deepBreath(4);
@@ -1355,6 +1872,10 @@
         await radioPlay(list[Math.max(0, i)], 0.5, { seconds: seconds - 1, prefill: true, piano });
       } else if (withMusic) { piano(6.5); }
       if (withBoot) bootAt(0.3, null);
+      for (const [v, at, pan = 0] of melodies) playPhrase(v, compose(v), at, pan);                 // e.g. [["violin", 1], ["flute", 6]]
+      if (thunders.length && !bank.lazy.thunder.some((e) => e.buf)) { thunderTake(null); await Promise.all(bank.lazy.thunder.filter((e) => e.loading).map((e) => e.loading)); }
+      for (const th of thunders) thunderAt(th.at, th);
+      if (morphTo) morphAt(0.5, { to: morphTo, seconds: 2.7 });
       if (withSfx) {
         // scripted events at fixed times (an offline context's clock doesn't run, so every time is explicit)
         glassTick(noteOf("gz/Win", 3), { t: 1, gain: 0.032 });
@@ -1384,7 +1905,7 @@
         sum += ss; perSecond.push(Math.round(10 * Math.log10(ss / (2 * sr) + 1e-12)));
       }
       return { peakDb: Math.round(20 * Math.log10(peak + 1e-12) * 10) / 10, rmsDb: Math.round(10 * Math.log10(sum / (2 * sr * seconds) + 1e-12) * 10) / 10, nan, perSecondDb: perSecond, buffer: buf };
-    },
-  };
+    }
+  }
   window.CodeRoomSound = api;
 })();

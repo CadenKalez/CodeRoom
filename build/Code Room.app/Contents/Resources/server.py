@@ -13,6 +13,7 @@ Nothing is ever written into a scanned tree. The only file this writes is the
 recent-repositories list in the user's config folder.
 """
 import argparse
+import email.utils
 import hashlib
 import json
 import os
@@ -24,6 +25,7 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.request
 import webbrowser
 from collections import Counter, defaultdict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -770,13 +772,58 @@ def clean_path(p):
     return os.path.realpath(os.path.expanduser(p.strip()))
 
 
+SAMPLE_NAME = re.compile(r"[A-Za-z0-9_-]+\.(?:m4a|flac|json|mod|xm|mp3)")
+SAMPLE_TYPES = {".m4a": "audio/mp4", ".flac": "audio/flac", ".json": "application/json", ".mod": "application/octet-stream",
+                ".xm": "application/octet-stream", ".mp3": "audio/mpeg"}
+
+# Scene classics (keygen / cracktro tunes) whose license lets them be passed on only as the original,
+# unbundled file: they're not shipped with Code Room. The first time the radio picks one, it's downloaded
+# from The Mod Archive into the user's cache, the same as saving it from the site. Only the module ids
+# listed in music/playlist.json are ever fetched.
+if sys.platform == "darwin":
+    MODULE_CACHE = os.path.expanduser("~/Library/Caches/Code Room/modules")
+else:
+    MODULE_CACHE = os.path.join(os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache"), "coderoom", "modules")
+_module_lock = threading.Lock()
+
+
+def remote_ids():
+    try:
+        with open(os.path.join(HERE, "music", "playlist.json"), encoding="utf-8") as f:
+            return {int(e["remote"]) for e in json.load(f) if e.get("remote")}
+    except (OSError, ValueError, KeyError, TypeError):
+        return set()
+
+
+def fetch_module(mid):
+    path = os.path.join(MODULE_CACHE, f"{mid}.bin")
+    with _module_lock:
+        if os.path.isfile(path):
+            return path
+        req = urllib.request.Request(f"https://api.modarchive.org/downloads.php?moduleid={mid}", headers={"User-Agent": "CodeRoom/1.0"})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            data = r.read(4 * 1024 * 1024 + 1)
+        is_xm = data[:17] == b"Extended Module: "
+        is_mod = data[1080:1084] in (b"M.K.", b"M!K!", b"4CHN", b"FLT4")
+        if len(data) > 4 * 1024 * 1024 or not (is_xm or is_mod):
+            raise ValueError("not a module")
+        os.makedirs(MODULE_CACHE, exist_ok=True)
+        with open(path + ".part", "wb") as f:
+            f.write(data)
+        os.replace(path + ".part", path)
+    return path
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "CodeRoom"
 
-    def _send(self, code, body, ctype):
+    def _send(self, code, body, ctype, cache="no-store"):
         self.send_response(code)
         self.send_header("Content-Type", ctype)
-        self.send_header("Cache-Control", "no-store")
+        self.send_header("Cache-Control", cache)
+        if cache != "no-store":
+            self.send_header("Accept-Ranges", "bytes")
+            if getattr(self, "last_modified", None): self.send_header("Last-Modified", self.last_modified)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -796,6 +843,53 @@ class Handler(BaseHTTPRequestHandler):
         if url.path == "/sound.js":
             with open(os.path.join(HERE, "sound.js"), "rb") as f:
                 return self._send(200, f.read(), "text/javascript; charset=utf-8")
+        remote = re.fullmatch(r"/music/remote/(\d{1,7})", url.path)
+        if remote:
+            mid = int(remote.group(1))
+            if mid not in remote_ids():
+                return self._send(404, b"not found", "text/plain")
+            try:
+                path = fetch_module(mid)
+            except Exception as err:  # offline, or the archive is down: the radio just picks something else
+                return self._send(502, f"can't fetch module {mid}: {err}".encode(), "text/plain")
+            with open(path, "rb") as f:
+                return self._send(200, f.read(), "application/octet-stream", "no-cache")
+        if url.path.startswith(("/samples/", "/music/")):
+            # the bundled sample pack and music: plain file names only, never a path
+            folder, name = url.path[1:].split("/", 1)
+            ctype = SAMPLE_TYPES.get(os.path.splitext(name)[1])
+            path = os.path.join(HERE, folder, name)
+            if not SAMPLE_NAME.fullmatch(name) or not ctype or not os.path.isfile(path):
+                return self._send(404, b"not found", "text/plain")
+            # revalidate by modification time, so a rebuilt sample is never served stale from a cache
+            mtime = email.utils.formatdate(os.path.getmtime(path), usegmt=True)
+            if self.headers.get("If-Modified-Since") == mtime and not self.headers.get("Range"):
+                self.send_response(304); self.send_header("Last-Modified", mtime); self.end_headers(); return
+            with open(path, "rb") as f:
+                data = f.read()
+            self.last_modified = mtime
+            rng = re.fullmatch(r"bytes=(\d*)-(\d*)", self.headers.get("Range", "").strip())
+            if not rng or not (rng.group(1) or rng.group(2)):
+                return self._send(200, data, ctype, "no-cache")
+            # byte ranges: WebKit's media engine streams and seeks audio this way
+            n = len(data)
+            if rng.group(1):
+                start, end = int(rng.group(1)), min(n - 1, int(rng.group(2) or n - 1))
+            else:
+                start, end = max(0, n - int(rng.group(2))), n - 1
+            if start >= n or start > end:
+                self.send_response(416); self.send_header("Content-Range", f"bytes */{n}"); self.end_headers(); return
+            body = data[start:end + 1]
+            self.send_response(206)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Accept-Ranges", "bytes")
+            self.send_header("Content-Range", f"bytes {start}-{end}/{n}")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Last-Modified", mtime)
+            self.end_headers()
+            self.wfile.write(body)
+            return
         if url.path == "/api/graph":
             root = qs.get("root") or self.server.default_root
             if not root:

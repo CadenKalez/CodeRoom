@@ -121,7 +121,7 @@
 
   .legend {
     position: fixed; left: 16px; bottom: 16px; display: flex; flex-wrap: wrap; gap: 6px; z-index: 2;
-    max-width: min(620px, calc(100vw - 32px)); max-height: 28vh; overflow: auto;
+    max-width: min(620px, calc(100vw - 290px)); max-height: 28vh; overflow: auto;
   }
   .chip {
     all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 11px; padding: 5px 10px;
@@ -230,7 +230,34 @@
     background: rgba(4, 2, 12, 0.85); border: 1px solid var(--glass-edge); transform: translate(12px, 12px); display: none; white-space: nowrap;
   }
 
+  /* view switcher, bottom-right: the same modules as a cloud, a branching tree or a city */
+  .views {
+    position: fixed; right: 16px; bottom: 96px; z-index: 3; display: flex; gap: 2px; padding: 4px; border-radius: 14px;
+    background: var(--glass); border: 1px solid var(--glass-edge); box-shadow: 0 0 30px rgba(79, 243, 255, 0.08);
+    transition: right 0.35s cubic-bezier(.2,.8,.2,1);
+  }
+  .views .pill {
+    position: absolute; top: 4px; bottom: 4px; left: 0; width: 0; border-radius: 10px; pointer-events: none;
+    background: linear-gradient(135deg, rgba(255, 95, 210, 0.32), rgba(79, 243, 255, 0.32)); border: 1px solid rgba(79, 243, 255, 0.55);
+    box-shadow: 0 0 18px rgba(79, 243, 255, 0.3), inset 0 0 12px rgba(255, 255, 255, 0.06);
+    transition: transform 0.5s cubic-bezier(.3,1.35,.45,1), width 0.5s cubic-bezier(.3,1.35,.45,1);
+  }
+  .views button {
+    all: unset; position: relative; z-index: 1; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 6px 11px 5px; border-radius: 10px; color: var(--ink-dim); font: 700 9.5px var(--display); letter-spacing: 0.12em; text-transform: uppercase;
+    transition: color 0.3s;
+  }
+  .views button svg { width: 28px; height: 20px; transition: transform 0.4s cubic-bezier(.3,1.4,.4,1); }
+  .views button:hover { color: var(--ink); }
+  .views button:hover svg { transform: translateY(-1px) scale(1.06); }
+  .views button[aria-checked="true"] { color: #fff; }
+  .views button:focus-visible { outline: 1px solid var(--dep); }
+  aside.open ~ .views { right: 412px; }
+
   @media (max-width: 720px) {
+    .views { bottom: 16px; }
+    .legend { bottom: 80px; max-width: calc(100vw - 32px); max-height: 18vh; }
+    aside.open ~ .views { display: none; }
     header { padding: 10px 16px; gap: 8px; }
     h1 { font-size: 15px; }
     .stats { display: none; }
@@ -276,7 +303,8 @@
     <button class="tbtn update" id="tUpdate" title="Rescan the repository for changes (U)"><span class="spin">⟳</span> Update</button>
     <button class="tbtn" id="tAuto" aria-pressed="false" title="Rescan automatically every 4 seconds">Auto</button>
     <button class="tbtn" id="tSound" aria-pressed="true" title="Ambience and sound effects">♪ Sound</button>
-    <button class="tbtn" id="tMusic" aria-pressed="true" title="Generative music: felt piano and distant chip tunes over the ambience">♫ Music</button>
+    <button class="tbtn" id="tMusic" aria-pressed="true" title="Music: piano, violin and flute melodies, and far-off chip tunes over the ambience">♫ Music</button>
+    <button class="tbtn" id="tStorm" aria-pressed="true" title="Now and then a storm passes far off: lightning in the void, distant thunder">ϟ Storm</button>
   </div>
   <span class="stats" id="scanned"></span>
 </header>
@@ -305,6 +333,15 @@
 </aside>
 
 <div class="legend" id="legend"></div>
+<div class="views" id="views" role="radiogroup" aria-label="View">
+  <span class="pill" id="viewPill"></span>
+  <button role="radio" data-mode="cloud" aria-checked="true" title="Cloud: modules float where their references pull them (1)">
+    <svg viewBox="0 0 28 20" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8.5" r="4.2"/><circle cx="19.5" cy="6" r="3"/><circle cx="17.5" cy="15.2" r="2.4"/><path d="M12.1 7.6 16.6 6.6M11.2 11.2l4.6 2.6M19 9l-1 3.8" stroke-width="1" opacity=".65"/></svg>Cloud</button>
+  <button role="radio" data-mode="tree" aria-checked="false" title="Branches: the folder tree, every file a bud around its folder (2)">
+    <svg viewBox="0 0 28 20" fill="none" stroke="currentColor" stroke-width="1.15"><path d="M14 10 7 5.5M14 10l7-5M14 10l.5 6.5M7 5.5 3.6 3.4M7 5.5 4.2 8.6"/><circle cx="14" cy="10" r="1.7" fill="currentColor"/><g fill="currentColor" stroke="none"><circle cx="3.4" cy="3.2" r="1.4"/><circle cx="4" cy="8.8" r="1.3"/><circle cx="21.2" cy="4.9" r="1.7"/><circle cx="24.2" cy="3" r="1"/><circle cx="24.4" cy="7" r="1.1"/><circle cx="14.6" cy="16.8" r="1.5"/><circle cx="12" cy="18.2" r=".9"/><circle cx="17.1" cy="18.3" r=".9"/></g></svg>Branches</button>
+  <button role="radio" data-mode="city" aria-checked="false" title="City: folders become districts, files buildings, height = functions (3)">
+    <svg viewBox="0 0 28 20" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linejoin="round"><path d="M2 13.6 14 19l12-5.4L14 8.2Z" opacity=".5"/><path d="M6 13.4V8.6l3.4 1.5v4.8M6 8.6 9.4 7l3.4 1.6-3.4 1.5"/><path d="M14 14.6V3.8l4.2 1.9v10.8M14 3.8 18.2 2l4.2 1.8-4.2 1.9"/></svg>City</button>
+</div>
 <div class="hint">size = functions &nbsp; strands = references<br>
   drag empty space · orbit &nbsp; drag bubble · shake it &nbsp; scroll · zoom<br>
   <span style="color:var(--dep)">●</span> depends on &nbsp; <span style="color:var(--user)">●</span> used by<br><span id="fps"></span></div>
@@ -354,8 +391,19 @@
   let treeSet = null, matchSet = null;
   let sizeScale = 1, spacing = 1; // Size slider (drawn radius) and Spread slider (distance between bubbles)
   let currentRoot = null, repoName = "", recent = [], home = "", supported = [];
+  // views: where the bubbles live. "cloud" is the force layout, "tree" the folder tree (Gource-like),
+  // "city" a treemap of districts and buildings. morph carries a switch in progress; modeW fades each
+  // view's own scenery (branches, platforms) in and out with it.
+  const MODES = ["cloud", "tree", "city"];
+  const MODE_PITCH = { cloud: 0.3, tree: 0.98, city: 0.6 };
+  let mode = "cloud", morph = null, dirs = [], dirRoot = null, cityRects = [];
+  const modeW = { cloud: 1, tree: 0, city: 0 };
 
   function visible(n) { return !hiddenGroups.has(n.group); }
+  const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
+  const sstep = (a, b, v) => { const t = clamp01((v - a) / (b - a)); return t * t * (3 - 2 * t); };
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const rand = (a, b) => a + Math.random() * (b - a);
   function hexA(hex, a) {
     const v = parseInt(hex.slice(1), 16);
     return `rgba(${v >> 16},${(v >> 8) & 255},${v & 255},${a})`;
@@ -434,6 +482,203 @@
     alpha *= 0.991;
   }
 
+  // ---------- the other views: a folder tree and a city ----------
+  // The folders behind the modules. A Go package is a folder already, so it hangs off its parent.
+  // Folders that hold nothing but one sub-folder fold into it (deep Java packages stay readable).
+  function buildDirs() {
+    const byPath = new Map();
+    const get = (p) => {
+      let d = byPath.get(p);
+      if (d) return d;
+      const cut = p.lastIndexOf("/");
+      d = { path: p, name: p ? p.slice(cut + 1) : repoName || "/", parent: null, kids: [], files: [], depth: 0, color: null };
+      byPath.set(p, d);
+      if (p) { d.parent = get(cut < 0 ? "" : p.slice(0, cut)); d.parent.kids.push(d); }
+      return d;
+    };
+    let root = get("");
+    for (const n of nodes) {
+      const id = n.id === "(root)" ? "" : n.id, cut = id.lastIndexOf("/");
+      get(cut < 0 ? "" : id.slice(0, cut)).files.push(n);
+    }
+    const fold = (d) => {
+      while (d.kids.length === 1 && !d.files.length) {
+        const k = d.kids[0];
+        d.name = d.name + "/" + k.name;
+        d.path = k.path; d.kids = k.kids; d.files = k.files;
+        for (const kk of d.kids) kk.parent = d;
+      }
+      for (const k of d.kids) fold(k);
+    };
+    fold(root);
+    const all = [];
+    (function walk(d, depth) {
+      d.depth = depth; all.push(d);
+      d.kids.sort((a, b) => a.name.localeCompare(b.name));
+      for (const n of d.files) n.dir = d;
+      for (const k of d.kids) walk(k, depth + 1);
+    })(root, 0);
+    // a folder takes the colour of its own modules, or of its first sub-folder that has some
+    for (let i = all.length - 1; i >= 0; i--) {
+      const d = all[i];
+      d.color = d.files.length ? d.files[0].color : (d.kids.find((k) => k.color) || {}).color || "#8cf0ff";
+    }
+    dirRoot = root; dirs = all;
+  }
+
+  // Branches: the folder tree laid out flat like Gource. Each folder is a bright node with its files
+  // around it in a dandelion ball (biggest in the middle); sub-folders fan out away from the parent,
+  // each subtree in its own circle so no two branches cross. Bigger repositories are scaled to fit
+  // (and their buds shrink with them).
+  function layoutTree() {
+    if (!dirRoot) return;
+    const S0 = 0.62, bud = (n) => radiusOf(n) * S0 + 2.5;
+    const wedgeOf = (d) => (d.parent ? Math.PI * 1.25 : Math.PI * 2);
+    for (let i = dirs.length - 1; i >= 0; i--) {
+      const d = dirs[i];
+      d.files.sort((a, b) => b.funcs - a.funcs || b.loc - a.loc || (a.id < b.id ? -1 : 1));
+      let acc = 0;
+      d.ring = d.files.map((n) => { const b = bud(n), r = 1.3 * Math.sqrt(acc + b * b * 0.5); acc += b * b; return r; });
+      d.cr = d.files.length ? 1.3 * Math.sqrt(acc) + 6 : 4;
+      if (!d.kids.length) { d.ext = d.cr; continue; }
+      // each sub-folder gets a slice of the fan in proportion to its size, and sits just far enough out
+      // that its whole subtree fits inside its slice (small branches stay short, big ones reach further)
+      const wedge = wedgeOf(d), mean = d.kids.reduce((s, k) => s + k.ext, 0) / d.kids.length;
+      const wts = d.kids.map((k) => k.ext + 0.35 * mean), tw = wts.reduce((a, b) => a + b, 0);
+      d.ext = d.cr;
+      d.kids.forEach((c, i) => {
+        c.span = (wedge * wts[i]) / tw;
+        const half = Math.min(c.span / 2, Math.PI / 2 - 0.05);
+        c.L = Math.max(d.cr + 16 + c.ext, (c.ext + 6) / Math.sin(half));
+        d.ext = Math.max(d.ext, c.L + c.ext);
+      });
+    }
+    const k = Math.min(1, (820 * LS) / Math.max(1, dirRoot.ext)), y0 = -90 * LS;
+    dirRoot.tx = 0; dirRoot.tz = 0; dirRoot.ang = -Math.PI / 2;
+    for (const d of dirs) {
+      d.x = d.tx * k; d.y = y0; d.z = d.tz * k;
+      d.files.forEach((n, i) => {
+        const a = i * 2.39996 + d.ang, r = d.ring[i], R = d.cr * 1.02;
+        const up = Math.sqrt(Math.max(0, R * R - r * r)) * 0.55 * (i % 2 ? -1 : 1) * (d.files.length > 2 ? 1 : 0);
+        n.lt = { x: (d.tx + Math.cos(a) * r) * k, y: y0 + up * k, z: (d.tz + Math.sin(a) * r) * k, s: Math.max(0.16, S0 * k) };
+      });
+      if (!d.kids.length) continue;
+      let cur = d.ang - (d.parent ? wedgeOf(d) / 2 : 0);
+      for (const c of d.kids) {
+        const phi = cur + c.span / 2; cur += c.span;
+        c.ang = phi; c.tx = d.tx + Math.cos(phi) * c.L; c.tz = d.tz + Math.sin(phi) * c.L;
+      }
+    }
+  }
+
+  // City: a squarified treemap. Every folder is a platform (district) raised a step above its parent,
+  // every module a building on it: footprint by lines of code, height by functions.
+  function squarify(items, x, y, w, h, place) {
+    const total = items.reduce((s, it) => s + it.w, 0);
+    if (!total || w <= 0 || h <= 0) return;
+    const scale = (w * h) / total, worst = (s, mx, mn, len) => Math.max((len * len * mx) / (s * s), (s * s) / (len * len * mn));
+    let i = 0;
+    while (i < items.length) {
+      const len = Math.min(w, h);
+      let j = i, s = 0, mx = 0, mn = Infinity, cur = Infinity;
+      while (j < items.length) {
+        const a = items[j].w * scale, ns = s + a, nmx = Math.max(mx, a), nmn = Math.min(mn, a), wv = worst(ns, nmx, nmn, len);
+        if (j > i && wv > cur) break;
+        s = ns; mx = nmx; mn = nmn; cur = wv; j++;
+      }
+      const thick = s / len;
+      let off = 0;
+      for (let k = i; k < j; k++) {
+        const l = (items[k].w * scale) / thick;
+        if (w >= h) place(items[k], x, y + off, thick, l); else place(items[k], x + off, y, l, thick);
+        off += l;
+      }
+      if (w >= h) { x += thick; w -= thick; } else { y += thick; h -= thick; }
+      i = j;
+    }
+  }
+  const CITY = { side: 1500, y0: -420, slab: 5 };
+  function layoutCity() {
+    if (!dirRoot) return;
+    const wOf = (n) => Math.pow(Math.max(n.loc, 1), 0.72) + 14;
+    for (let i = dirs.length - 1; i >= 0; i--) {
+      const d = dirs[i];
+      d.w = d.files.reduce((s, n) => s + wOf(n), 0) + d.kids.reduce((s, k) => s + k.w, 0);
+    }
+    const side = CITY.side * LS, slab = CITY.slab * LS, y0 = CITY.y0 * LS, half = side / 2;
+    cityRects = [];
+    const place = (d, x, z, w, h, depth) => {
+      const top = y0 + (depth + 1) * slab;
+      cityRects.push(d.rect = { d, x0: x - half, z0: z - half, x1: x + w - half, z1: z + h - half, y0: top - slab, y1: top, depth });
+      const pad = Math.min(w, h) * 0.03 + 2.5 * LS;
+      const lab = depth > 0 && Math.min(w, h) > 70 * LS ? Math.min(16 * LS, h * 0.07) : 0;   // a strip for the folder's name
+      const items = d.kids.map((k) => ({ k, w: k.w })).concat(d.files.map((n) => ({ n, w: wOf(n) }))).sort((a, b) => b.w - a.w);
+      squarify(items, x + pad, z + pad + lab, w - 2 * pad, h - 2 * pad - lab, (it, rx, rz, rw, rh) => {
+        if (it.k) { place(it.k, rx, rz, rw, rh, depth + 1); return; }
+        const n = it.n, inset = Math.min(rw, rh) * 0.14 + 0.8 * LS;
+        const bw = Math.max(1.5 * LS, rw - 2 * inset), bd = Math.max(1.5 * LS, rh - 2 * inset);
+        const bh = (5 + Math.sqrt(n.funcs) * 6.5 + Math.sqrt(n.loc) * 0.55) * LS;
+        n.lc = { x: rx + rw / 2 - half, y: top + bh / 2, z: rz + rh / 2 - half, w: bw, h: bh, d: bd, s: 0.5 };
+      });
+    };
+    place(dirRoot, 0, 0, side, side, 0);
+  }
+
+  // where a module lives in a view (layout units) and how big its bubble is there
+  function posIn(n, m) { return m === "tree" && n.lt ? n.lt : m === "city" && n.lc ? n.lc : n; }
+  function sizeIn(n, m) { return m === "tree" && n.lt ? n.lt.s : m === "city" && n.lc ? 0.5 : 1; }
+  function relayout() { buildDirs(); layoutTree(); layoutCity(); }
+
+  // Switch views: every bubble flies from wherever it is now to its place in the new view, along a
+  // curve that lifts it up through the void, staggered so the change sweeps across the scene
+  // (outward from the root for the tree, a diagonal wave of rising buildings for the city).
+  function setMode(to, { instant = false, quiet = false, force = false, keepPitch = false } = {}) {
+    if (!MODES.includes(to)) return;
+    const from = mode;
+    if (to === from && !instant && !force) return;
+    mode = to;
+    for (const b of document.querySelectorAll("#views button")) b.setAttribute("aria-checked", b.dataset.mode === to);
+    placePill();
+    try { localStorage.setItem("coderoom.mode", to); } catch (_) {}
+    if (instant || !nodes.length) {
+      morph = null;
+      for (const m of MODES) modeW[m] = m === to ? 1 : 0;
+      for (const n of nodes) { n.f = null; }
+      cam.pitch = MODE_PITCH[to];
+      updateFit();
+      return;
+    }
+    const key = (n) => {
+      const G = posIn(n, to);
+      return to === "city" ? G.x + G.z : Math.hypot(G.x, G.z) + (to === "cloud" ? Math.abs(G.y) : 0);
+    };
+    let lo = Infinity, hi = -Infinity;
+    for (const n of nodes) {
+      n.f = { x: n.lx ?? n.x, y: n.ly ?? n.y, z: n.lz ?? n.z, s: n.ms ?? 1, b: n.mb ?? 0 };
+      const v = key(n); n.mk = v; lo = Math.min(lo, v); hi = Math.max(hi, v);
+    }
+    const spanD = 1.0, nd = 1.55;
+    for (const n of nodes) { n.md = ((n.mk - lo) / Math.max(1e-6, hi - lo)) * spanD + Math.random() * 0.18; n.sv = Math.random(); }
+    morph = { from, to, t0: T, nd, total: spanD + 0.18 + nd, fromW: { ...modeW }, pitch0: cam.pitch, keepPitch };
+    if (!keepPitch) userZoomed = false;
+    updateFit();
+    if (selected) aimAt(selected);
+    if (!quiet) SFX.morph({ to, from, seconds: morph.total, count: nodes.length });
+  }
+  // the switcher's glowing pill slides under the chosen view
+  function placePill() {
+    const b = document.querySelector(`#views button[data-mode="${mode}"]`), pill = $("viewPill");
+    if (!b || !pill) return;
+    pill.style.width = b.offsetWidth + "px";
+    pill.style.transform = `translateX(${b.offsetLeft}px)`;
+  }
+  // per-frame fades of each view's scenery, in step with the bubbles' flight
+  function updateModeW() {
+    if (!morph) { for (const m of MODES) modeW[m] = m === mode ? 1 : 0; return; }
+    const p = clamp01((T - morph.t0) / morph.total);
+    for (const m of MODES) modeW[m] = m === morph.to ? Math.max(morph.fromW[m], sstep(0.4, 1, p)) : morph.fromW[m] * (1 - sstep(0, 0.4, p));
+  }
+
   // world position = layout position × spread + a gentle floating bob
   // While a repository opens, the bloom unfurls it like a rose: each bubble swings out from the
   // centre along a gentle spiral (inner petals first), then two soft pulses ripple from the rim
@@ -442,8 +687,28 @@
   const easeOutBack = (p) => { const c1 = 1.15, c3 = c1 + 1, u = p - 1; return 1 + c3 * u * u * u + c1 * u * u; };
   function updateWorld() {
     const B = bloom && T > bloom.end ? (bloom = null) : bloom;
+    const M = morph && T > morph.t0 + morph.total ? (morph = null) : morph;
+    const gb = mode === "city" ? 1 : 0;
     for (const n of nodes) {
-      let x = n.x * spacing, y = n.y * spacing, z = n.z * spacing, bob = Math.sin(T * 0.9 + n.phase) * 3;
+      // where the current view puts it; mid-switch, somewhere along its flight from the last view
+      const G = posIn(n, mode), gs = sizeIn(n, mode);
+      let lx = G.x, ly = G.y, lz = G.z, ms = gs, mb = gb;
+      if (M && n.f) {
+        const p = clamp01((T - M.t0 - n.md) / M.nd);
+        if (p < 1) {
+          const F = n.f, e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(2 - 2 * p, 3) / 2, u = 1 - e;
+          const dx = G.x - F.x, dz = G.z - F.z, d = Math.hypot(dx, G.y - F.y, dz) || 1, hd = Math.hypot(dx, dz) || 1;
+          const lift = Math.min(d * (0.18 + 0.1 * n.sv), 120 * LS) + Math.min(24, d * 0.4), side = d * (0.1 + 0.16 * n.sv);   // up through the void, curving round
+          const cx = (F.x + G.x) / 2 - (dz / hd) * side, cyy = (F.y + G.y) / 2 + lift, cz = (F.z + G.z) / 2 + (dx / hd) * side;
+          lx = u * u * F.x + 2 * u * e * cx + e * e * G.x;
+          ly = u * u * F.y + 2 * u * e * cyy + e * e * G.y;
+          lz = u * u * F.z + 2 * u * e * cz + e * e * G.z;
+          ms = (F.s + (gs - F.s) * sstep(0, 1, p)) * (1 - 0.2 * Math.sin(Math.PI * p));
+          mb = F.b + (gb - F.b) * (gb > F.b ? sstep(0.6, 1, p) : sstep(0, 0.4, p));     // swell into a building on landing, melt first on leaving
+        }
+      }
+      n.lx = lx; n.ly = ly; n.lz = lz; n.ms = ms; n.mb = mb;
+      let x = lx * spacing, y = ly * spacing, z = lz * spacing, bob = Math.sin(T * 0.9 + n.phase) * 3 * (1 - mb);
       n.bs = 1; n.bl = 1; n.bp = 0;
       if (B && n.bDelay !== undefined) {
         const p = Math.max(0, Math.min(1, (T - B.start - n.bDelay) / 1.5)), e = 1 - Math.pow(1 - p, 3);
@@ -468,13 +733,15 @@
           wave += b.s * Math.exp(-d * d) * (1 - age / 1.5);
         }
         if (wave > 0.002 && rr > 1) {
-          const k = (6 * wave * spacing) / rr;
-          x += (n.x - focusL.x) * k; y += (n.y - focusL.y) * k * 0.6; z += (n.z - focusL.z) * k;
+          const k = (6 * wave * spacing) / rr * (1 - 0.8 * mb);
+          x += (lx - focusL.x) * k; y += (ly - focusL.y) * k * 0.6; z += (lz - focusL.z) * k;
           n.bs *= 1 + 0.07 * wave;
         }
         n.wv = wave;
-        if (flutter > 0.002) { const a = flutter * 2.2 * spacing; x += a * Math.sin(T * 11 + n.phase * 5); y += a * Math.cos(T * 13.7 + n.phase * 7); }
+        if (flutter > 0.002) { const a = flutter * 2.2 * spacing * (1 - mb); x += a * Math.sin(T * 11 + n.phase * 5); y += a * Math.cos(T * 13.7 + n.phase * 7); }
       } else n.wv = 0;
+      n.bs *= ms;
+      n.ay = mb > 0 && n.lc ? mb * n.lc.h * spacing * (sizeScale - 0.5) : 0;    // strands leave a building from its roof
       n.wx = x; n.wy = y + bob; n.wz = z;
     }
   }
@@ -483,10 +750,10 @@
     if (!nodes.length) return null;
     const TAU = Math.PI * 2;
     let maxR = 1;
-    for (const n of nodes) { n.bRad = Math.sqrt(n.x * n.x + n.y * n.y + n.z * n.z); maxR = Math.max(maxR, n.bRad); }
+    for (const n of nodes) { const P = posIn(n, mode); n.bRad = Math.sqrt(P.x * P.x + P.y * P.y + P.z * P.z); maxR = Math.max(maxR, n.bRad); }
     const ranked = [...nodes].sort((a, b) => a.bRad - b.bRad), N = ranked.length;
     ranked.forEach((n, rank) => {
-      const ang = (Math.atan2(n.z, n.x) + TAU) % TAU;
+      const P = posIn(n, mode), ang = (Math.atan2(P.z, P.x) + TAU) % TAU;
       n.bDelay = (n.bRad / maxR) * 1.36 + (rank / N) * 0.34 + (ang / TAU) * 0.18;
       n.bTwist = 1.6 * (0.6 + 0.4 * n.bRad / maxR);
     });
@@ -496,8 +763,8 @@
     const byDelay = [...nodes].sort((a, b) => a.bDelay - b.bDelay), count = Math.min(N, 8 + Math.min(8, Math.round(Math.log2(1 + N / 20))));
     const petals = [];
     for (let k = 0; k < count; k++) {
-      const n = byDelay[Math.floor((k + 0.5) * N / count)];
-      petals.push({ at: start - T + n.bDelay + 0.35, pan: Math.max(-0.85, Math.min(0.85, (n.x * cy - n.z * sy) / maxR)) });
+      const n = byDelay[Math.floor((k + 0.5) * N / count)], P = posIn(n, mode);
+      petals.push({ at: start - T + n.bDelay + 0.35, pan: Math.max(-0.85, Math.min(0.85, (P.x * cy - P.z * sy) / maxR)) });
     }
     return { start: start - T, petals, waves: [waveAt - T, wave2At - T], end: bloom.end - T };
   }
@@ -506,7 +773,8 @@
   // Every link gets 1..6 strands (log2 of how often the importer mentions the imported
   // module). A strand is NP points; the two ends are pinned to the bubbles' surfaces,
   // the interior points sway with a little gravity and drift and lag when bubbles move.
-  const SLACK = 1.12, DAMP = 0.93, GRAV = -0.01, BOW = 0.035, STRAND_CAP = 6000;
+  const SLACK = 1.12, DAMP = 0.93, BOW = 0.035, STRAND_CAP = 6000;
+  let GRAV = -0.01;    // strands sag in the cloud and arch up over the city
   let NP = 6;          // points per strand rope (5 on big graphs)
   let strands = [], SP = new Float32Array(0), SQ = new Float32Array(0), SX = new Float32Array(0), SY = new Float32Array(0);
   const E = new Float32Array(6);
@@ -520,11 +788,11 @@
     let dx = t.wx - s.wx, dy = t.wy - s.wy, dz = t.wz - s.wz;
     const d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1; dx /= d; dy /= d; dz /= d;
     const ax = dx + st.ax * sp, ay = dy + st.ay * sp, az = dz + st.az * sp;
-    const ka = s.r * s.bs * sizeScale * 0.9 / (Math.sqrt(ax * ax + ay * ay + az * az) || 1);
-    E[0] = s.wx + ax * ka; E[1] = s.wy + ay * ka; E[2] = s.wz + az * ka;
+    const ka = s.r * s.bs * sizeScale * 0.9 * (1 - 0.9 * s.mb) / (Math.sqrt(ax * ax + ay * ay + az * az) || 1);
+    E[0] = s.wx + ax * ka; E[1] = s.wy + ay * ka + s.ay; E[2] = s.wz + az * ka;
     const bx = -dx + st.bx * sp, by = -dy + st.by * sp, bz = -dz + st.bz * sp;
-    const kb = t.r * t.bs * sizeScale * 0.9 / (Math.sqrt(bx * bx + by * by + bz * bz) || 1);
-    E[3] = t.wx + bx * kb; E[4] = t.wy + by * kb; E[5] = t.wz + bz * kb;
+    const kb = t.r * t.bs * sizeScale * 0.9 * (1 - 0.9 * t.mb) / (Math.sqrt(bx * bx + by * by + bz * bz) || 1);
+    E[3] = t.wx + bx * kb; E[4] = t.wy + by * kb + t.ay; E[5] = t.wz + bz * kb;
   }
   function straighten(o) {
     for (let k = 0; k < NP; k++) {
@@ -627,16 +895,46 @@
     void main() { v_side = a_side; v_col = a_col; gl_Position = clip(a_pos); }`, HIGHP + `
     varying float v_side; varying vec4 v_col;
     void main() { float f = exp(-v_side * v_side * 4.5) * v_col.a; gl_FragColor = vec4(v_col.rgb * f, f); }`);
-  // bubbles, confetti and pulses: textured or procedural quads, picked by a_mode
+  // bubbles, confetti and pulses: textured or procedural quads, picked by a_mode (and the city's box faces:
+  // their edges are drawn a pixel wide wherever the face is, which needs screen-space derivatives)
+  const DERIV = !!gl.getExtension("OES_standard_derivatives");
+  const FW = DERIV ? "#extension GL_OES_standard_derivatives : enable\n" : "";
   const spriteProg = program(SCREEN_VS + `
     attribute vec2 a_pos; attribute vec2 a_uv; attribute float a_mode; attribute vec4 a_col;
     varying vec2 v_uv; varying float v_mode; varying vec4 v_col; varying vec2 v_pos;
-    void main() { v_uv = a_uv; v_mode = a_mode; v_col = a_col; v_pos = a_pos; gl_Position = clip(a_pos); }`, HIGHP + `
+    void main() { v_uv = a_uv; v_mode = a_mode; v_col = a_col; v_pos = a_pos; gl_Position = clip(a_pos); }`, FW + HIGHP + `
     varying vec2 v_uv; varying float v_mode; varying vec4 v_col; varying vec2 v_pos;
     uniform sampler2D u_spr; uniform sampler2D u_code0; uniform sampler2D u_code1;
     uniform vec4 u_lpos[4];   // moving lights: x, y (px), height in front of the scene (px), reach (px)
     uniform vec4 u_lcol[4];   // their colour and intensity
+    ${DERIV ? "vec2 fw(vec2 v) { return fwidth(v); }" : "vec2 fw(vec2 v) { return vec2(0.03); }"}
+    float h1(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
     void main() {
+      if (v_mode > 6.5) {                       // city: a face of a box (7 building roof, 8 wall, 9 district platform)
+        vec2 f = vec2(fract(v_uv.x), v_uv.y), px = fw(f);
+        float seed = floor(v_uv.x);
+        vec2 ed = min(f, 1.0 - f) / max(px, vec2(1e-4));
+        float edge = 1.0 - smoothstep(0.5, 1.7, min(ed.x, ed.y));
+        vec3 base = v_col.rgb, c = base;
+        if (v_mode < 7.5) {                     // rows of code on the roof, fading out when too small to read
+          float rows = 7.0, ry = f.y * rows, row = floor(ry), fy = fract(ry);
+          float x0 = 0.12 + 0.2 * floor(h1(row + seed * 7.13) * 3.0) / 3.0, x1 = min(0.88, x0 + 0.14 + 0.62 * h1(row * 3.7 + seed * 1.31));
+          float ln = step(0.36, fy) * step(fy, 0.64) * step(x0, f.x) * step(f.x, x1) * step(0.08, f.y) * step(f.y, 0.92);
+          c += base * 1.7 * ln * (1.0 - smoothstep(0.22, 0.55, px.y * rows));
+        } else if (v_mode < 8.5) {
+          c *= 0.62 + 0.55 * (1.0 - f.y);       // walls darken toward the ground
+        } else {
+          vec2 g = abs(fract(f * 6.0) - 0.5) / max(px * 6.0, vec2(1e-4));
+          c += base * 0.35 * (1.0 - smoothstep(0.5, 1.5, min(g.x, g.y))) * (1.0 - smoothstep(0.03, 0.08, px.x * 6.0));
+        }
+        for (int i = 0; i < 4; i++) {           // the moving lights wash over the rooftops
+          float d = length(u_lpos[i].xy - v_pos) / u_lpos[i].w;
+          c += u_lcol[i].rgb * u_lcol[i].a * (v_mode < 7.5 ? 0.16 : 0.07) / (1.0 + d * d);
+        }
+        c = mix(c, min(vec3(1.0), base * 3.4 + 0.09), edge * (v_mode > 8.5 ? 0.6 : 0.85));
+        gl_FragColor = vec4(c * v_col.a, v_col.a);
+        return;
+      }
       if (v_mode < 0.5) {                       // dark core disk behind each bubble
         float a = v_col.a * (1.0 - smoothstep(0.92, 1.0, length(v_uv * 2.0 - 1.0)));
         gl_FragColor = vec4(v_col.rgb * a, a);
@@ -672,6 +970,7 @@
   const bgProg = program(FULL_VS, HIGHP + `
     uniform vec2 u_res; uniform float u_scale; uniform sampler2D u_atm;
     uniform vec4 u_wander; uniform vec3 u_wanderCol;   // x, y (px), radius (px), intensity
+    uniform vec3 u_amb;                                // the storm's flashes lighting the whole void a touch
     void main() {
       vec2 p = vec2(gl_FragCoord.x, u_res.y * u_scale - gl_FragCoord.y) / u_scale;
       float m = max(u_res.x, u_res.y);
@@ -681,6 +980,7 @@
       col += texture2D(u_atm, gl_FragCoord.xy / (u_res * u_scale)).rgb;
       vec2 dw = (p - u_wander.xy) / max(1.0, u_wander.z);
       col += u_wanderCol * (exp(-dot(dw, dw)) + 0.25 * exp(-sqrt(dot(dw, dw)) * 2.0)) * u_wander.w;
+      col += u_amb * (1.0 - 0.5 * t);
       col += (fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5) / 255.0;   // no banding
       gl_FragColor = vec4(col, 1.0);
     }`);
@@ -701,6 +1001,7 @@
   const atmEmitProg = program(FULL_VS, HIGHP + NOISE + `
     uniform vec2 u_res; uniform vec2 u_size; uniform float u_time; uniform vec2 u_drift;
     uniform vec4 u_core; uniform vec3 u_sky;
+    uniform vec4 u_flash; uniform vec2 u_fseed;   // lightning inside a cloud: x, y (px), cloud size (px), strength
     float shafts(float a, float t) {           // a fan of soft beams that drift and shimmer
       float s = pow(0.5 + 0.5 * sin(a * 9.0 + t * 0.11 + 1.5 * sin(a * 4.0 - t * 0.05)), 4.0);
       s += 0.6 * pow(0.5 + 0.5 * sin(a * 17.0 - t * 0.17 + 0.8), 6.0);
@@ -718,21 +1019,41 @@
       float f2 = fbm(q * 1.8 + vec2(-u_time * 0.017, u_time * 0.005) + f1 * 1.7);
       float low = smoothstep(0.35, 1.05, p.y / u_res.y);
       float dens = smoothstep(0.32, 0.95, f1 * 0.55 + f2 * 0.55) * (0.45 + 0.9 * low) + low * low * 0.22;
-      gl_FragColor = vec4(core, sky, clamp(dens, 0.0, 1.0), 1.0);
+      // the storm cloud lit from inside: billows catch the light, the gaps between them stay dark
+      float glow = 0.0;
+      if (u_flash.w > 0.001) {
+        vec2 dl = (p - u_flash.xy) / max(8.0, u_flash.z);
+        float r2 = dot(dl, dl);
+        if (r2 < 9.0) {
+          vec2 cq = p / max(8.0, u_flash.z) * 1.7 + u_fseed;
+          float b1 = fbm(cq), b2 = fbm(cq * 2.2 + b1 * 1.4 + 3.7);
+          float cloud = smoothstep(0.45, 0.95, b1 * 0.62 + b2 * 0.5 + 0.32 * exp(-r2 * 1.6));
+          glow = u_flash.w * exp(-r2 * 0.85) * (0.18 + 1.7 * cloud * cloud);
+        }
+      }
+      gl_FragColor = vec4(core, sky, clamp(dens, 0.0, 1.0), clamp(glow, 0.0, 1.0));
     }`);
   const atmScatterProg = program(FULL_VS, HIGHP + `
     uniform sampler2D u_a; uniform vec2 u_size; uniform vec2 u_coreUV; uniform vec2 u_skyUV;
     uniform vec3 u_coreCol; uniform vec3 u_skyCol; uniform float u_fog;
+    uniform vec4 u_flash; uniform float u_asp;   // lightning: x, y (uv), radius (uv), intensity of the sheet glow
+    uniform vec2 u_flashUV; uniform float u_flashK;   // and the lit cloud (emit alpha) and its scattered light
     void main() {
       vec2 uv = gl_FragCoord.xy / u_size;
-      vec2 d1 = (u_coreUV - uv) * 0.025, d2 = (u_skyUV - uv) * 0.025, s1 = uv, s2 = uv;
-      float a1 = 0.0, a2 = 0.0, w = 1.0;
-      for (int i = 0; i < 36; i++) { s1 += d1; s2 += d2; a1 += texture2D(u_a, s1).r * w; a2 += texture2D(u_a, s2).g * w; w *= 0.955; }
+      vec2 d1 = (u_coreUV - uv) * 0.025, d2 = (u_skyUV - uv) * 0.025, d3 = (u_flashUV - uv) * 0.02, s1 = uv, s2 = uv, s3 = uv;
+      float a1 = 0.0, a2 = 0.0, a3 = 0.0, w = 1.0;
+      for (int i = 0; i < 36; i++) {
+        s1 += d1; s2 += d2; s3 += d3;
+        a1 += texture2D(u_a, s1).r * w; a2 += texture2D(u_a, s2).g * w; a3 += texture2D(u_a, s3).a * w; w *= 0.955;
+      }
       vec4 here = texture2D(u_a, uv);
       float dens = here.b, low = smoothstep(0.35, 1.05, 1.0 - uv.y);
       vec3 beams = u_coreCol * (a1 / 16.0 + here.r * 0.5) + u_skyCol * a2 / 14.0;
       vec3 haze = mix(vec3(0.30, 0.28, 0.62), vec3(0.22, 0.42, 0.44), low);   // violet fog above, teal smog below
-      gl_FragColor = vec4(beams * (0.3 + 1.1 * dens) + haze * dens * u_fog, dens);
+      vec2 df = (uv - u_flash.xy) * vec2(1.0, u_asp) / max(1e-3, u_flash.z);
+      vec3 flash = vec3(0.62, 0.68, 1.0) * (u_flash.w * exp(-dot(df, df)) * (0.15 + 1.2 * dens)          // a faint sheet through the fog
+                 + u_flashK * (here.a * (0.75 + 0.7 * dens) + a3 / 20.0));                                // the cloud lit from inside
+      gl_FragColor = vec4(beams * (0.3 + 1.1 * dens) + haze * dens * u_fog + flash, dens);
     }`);
   // the fog in front: a thin veil of the same atmosphere laid over everything drawn so far
   const fogFrontProg = program(FULL_VS, HIGHP + `
@@ -814,6 +1135,19 @@
     b.quads++;
   }
 
+  // a quad with four arbitrary corners A B C D (perimeter order) and their uvs, into the sprite batch
+  function quad4(ax, ay, bx, by, cx, cy, dx, dy, u0, v0, u1, v1, mode) {
+    const b = quads;
+    if (b.quads >= MAX_QUADS) flush(b);
+    const f = b.f32, u = b.u8, v = b.quads * 4, o = v * 6;
+    f[o] = ax; f[o + 1] = ay; f[o + 2] = u0; f[o + 3] = v0; f[o + 4] = mode;            // v0 = A
+    f[o + 6] = bx; f[o + 7] = by; f[o + 8] = u1; f[o + 9] = v0; f[o + 10] = mode;       // v1 = B
+    f[o + 12] = dx; f[o + 13] = dy; f[o + 14] = u0; f[o + 15] = v1; f[o + 16] = mode;   // v2 = D
+    f[o + 18] = cx; f[o + 19] = cy; f[o + 20] = u1; f[o + 21] = v1; f[o + 22] = mode;   // v3 = C
+    for (let k = 0, ub = v * 24 + 20; k < 4; k++, ub += 24) { u[ub] = cr; u[ub + 1] = cg; u[ub + 2] = cb; u[ub + 3] = ca; }
+    b.quads++;
+  }
+
   const bgBuf = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, bgBuf);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
@@ -830,6 +1164,8 @@
     gl.uniform1i(L.u_atm, 5);
     gl.uniform4f(L.u_wander, wander.sx, wander.sy, wander.r, wander.vis ? wander.glow : 0);
     gl.uniform3f(L.u_wanderCol, wander.c[0], wander.c[1], wander.c[2]);
+    const amb = storm.light ? storm.light.i * 0.022 : 0;
+    gl.uniform3f(L.u_amb, amb * 0.7, amb * 0.76, amb);
     fullscreen(bgProg);
   }
   // two small render targets for the atmosphere (texture units 4 and 5), sized with the canvas
@@ -859,11 +1195,19 @@
     gl.uniform2f(L.u_drift, cam.yaw * 0.35, cam.pitch * 0.5);                // the fog drifts past as the camera turns
     gl.uniform4f(L.u_core, light.sx, light.sy, light.r, light.vis ? light.core * (1 + 0.6 * light.kick) : 0);
     gl.uniform3f(L.u_sky, light.skyX, light.skyY, light.sky);
+    const FL = storm.light;
+    gl.uniform4f(L.u_flash, FL ? FL.x : 0, FL ? FL.y : 0, FL ? FL.cloud : 1, FL ? Math.min(0.95, FL.i * 0.6) : 0);
+    gl.uniform2f(L.u_fseed, FL ? FL.seed : 0, FL ? FL.seed * 0.37 : 0);
     fullscreen(atmEmitProg);
     // the bubbles stand in the light's way
     gl.enable(gl.BLEND); gl.blendFunc(gl.ZERO, gl.ONE_MINUS_SRC_ALPHA); gl.colorMask(true, true, false, false);
     for (const n of order) {
       const p = proj[n.i], R = n.r * n.bs * sizeScale * p.s;
+      if (n.mb > 0.5 && p.fn) {
+        setColor("#000000", Math.min(0.85, p.a * Math.min(1, n.bl * 2)));
+        quad(p.bx0, p.by0, p.bx1, p.by1, 0, 0, 1, 1, 5);
+        continue;
+      }
       if (R < 1.5) continue;
       setColor("#000000", Math.min(0.92, p.a * Math.min(1, n.bl * 2)));
       quad(p.sx - R, p.sy - R, p.sx + R, p.sy + R, 0, 0, 1, 1, 0);
@@ -878,6 +1222,9 @@
     gl.uniform2f(L.u_coreUV, light.sx / W, 1 - light.sy / H); gl.uniform2f(L.u_skyUV, light.skyX / W, 1 - light.skyY / H);
     gl.uniform3f(L.u_coreCol, light.cr, light.cg, light.cb); gl.uniform3f(L.u_skyCol, 0.48, 0.55, 1.0);
     gl.uniform1f(L.u_fog, 0.55 + 0.25 * musicLevel);
+    const SL = storm.light;
+    gl.uniform4f(L.u_flash, SL ? SL.x / W : 0, SL ? 1 - SL.y / H : 0, SL ? SL.r / W : 1, SL ? SL.i * 0.07 : 0); gl.uniform1f(L.u_asp, H / W);
+    gl.uniform2f(L.u_flashUV, SL ? SL.x / W : 0, SL ? 1 - SL.y / H : 0); gl.uniform1f(L.u_flashK, SL ? 0.6 : 0);
     fullscreen(atmScatterProg);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, glCanvas.width, glCanvas.height);
   }
@@ -1049,6 +1396,11 @@
     bigNodes = new Set([...nodes].sort((a, b) => b.funcs - a.funcs).slice(0, 8));
     alpha = first ? 1 : Math.max(alpha, 0.25);
     if (first) for (let i = 0; i < (nodes.length > 1500 ? 20 : 80); i++) tick();
+    const was = !first && mode !== "cloud" ? new Map(nodes.map((n) => [n, posIn(n, mode)])) : null;
+    relayout();
+    if (first) setMode(mode, { instant: true });
+    else if (was && nodes.some((n) => { const a = was.get(n), b = posIn(n, mode); return a === n || Math.abs(a.x - b.x) + Math.abs(a.y - b.y) + Math.abs(a.z - b.z) > 0.5; }))
+      setMode(mode, { quiet: true, force: true, keepPitch: true });      // the tree / city changed shape: glide into it
     const bloomCues = first ? startBloom() : null;
     buildStrands();
 
@@ -1092,6 +1444,7 @@
     selected = hovered = dragNode = null; treeSet = matchSet = null; $("panel").classList.remove("open");
     q.value = ""; hits = []; renderResults();
     alpha = 1; LS = 1; userZoomed = false; bloom = null;
+    morph = null; dirs = []; dirRoot = null; cityRects = []; cityOrder = [];
     cam.dist = 2200; cam.tx = cam.ty = cam.tz = 0; goal.tx = goal.ty = goal.tz = 0; focus.x = focus.y = focus.z = 0;
   }
 
@@ -1291,25 +1644,26 @@
   function updateFit() {
     const vis = nodes.filter(visible);
     if (!vis.length) return;
+    const P = vis.map((n) => posIn(n, mode));
     let fx = 0, fy = 0, fz = 0;
-    for (const n of vis) { fx += n.x; fy += n.y; fz += n.z; }
+    for (const q of P) { fx += q.x; fy += q.y; fz += q.z; }
     fx /= vis.length; fy /= vis.length; fz /= vis.length;
-    const spreadOf = (x, y, z) => vis.map((n) => Math.hypot(n.x - x, n.y - y, n.z - z) + n.r).sort((a, b) => a - b);
+    const spreadOf = (x, y, z) => vis.map((n, i) => Math.hypot(P[i].x - x, P[i].y - y, P[i].z - z) + n.r).sort((a, b) => a - b);
     const h = Math.max(80, spreadOf(fx, fy, fz)[Math.floor(vis.length * 0.9)] * 0.55), inv = 1 / (2 * h * h);
-    for (let it = 0; it < 4; it++) {
+    for (let it = 0; it < (mode === "cloud" ? 4 : 0); it++) {      // the tree and the city stay centred
       let sx = 0, sy2 = 0, sz = 0, sw = 0;
-      for (const n of vis) {
-        const dx = n.x - fx, dy = n.y - fy, dz = n.z - fz, w = Math.exp(-(dx * dx + dy * dy + dz * dz) * inv);
-        sx += n.x * w; sy2 += n.y * w; sz += n.z * w; sw += w;
+      for (const q of P) {
+        const dx = q.x - fx, dy = q.y - fy, dz = q.z - fz, w = Math.exp(-(dx * dx + dy * dy + dz * dz) * inv);
+        sx += q.x * w; sy2 += q.y * w; sz += q.z * w; sw += w;
       }
       if (sw < 1e-6) break;
       fx = sx / sw; fy = sy2 / sw; fz = sz / sw;
     }
     focus.x = fx * spacing; focus.y = fy * spacing; focus.z = fz * spacing;
-    const ext = spreadOf(fx, fy, fz), r90 = ext[Math.floor(ext.length * 0.9)];
+    const ext = spreadOf(fx, fy, fz), r90 = ext[Math.floor(ext.length * (mode === "cloud" ? 0.9 : 0.97))];
     fitR = r90; focusL.x = fx; focusL.y = fy; focusL.z = fz;
-    for (const n of nodes) n.rr = Math.hypot(n.x - fx, n.y - fy, n.z - fz);
-    fitDist = Math.max(500, r90 * (1 + F / (0.52 * Math.min(W, H))));
+    for (const n of nodes) { const q = posIn(n, mode); n.rr = Math.hypot(q.x - fx, q.y - fy, q.z - fz); }
+    fitDist = Math.max(500, r90 * (mode === "cloud" ? 1 : 0.92) * (1 + F / (0.52 * Math.min(W, H))));
   }
 
   // ---------- lighting ----------
@@ -1382,7 +1736,9 @@
     const f = selected || hovered, fp = f && proj[f.i];
     if (fp && fp.vis) { const v = parseInt(f.color.slice(1), 16); set(2, fp.sx, fp.sy, 50, Math.max(80, (fp.R || 20) * 9), [(v >> 16) / 255, ((v >> 8) & 255) / 255, (v & 255) / 255], selected ? 1.6 + 0.3 * Math.sin(T * 3) : 0.9); }
     else set(2, 0, 0, 1, 1, [0, 0, 0], 0);
-    set(3, W * (0.5 + noteLight.pan * 0.4), H * 0.4, 260, Math.max(W, H) * 0.45, [1, 0.86, 0.7], noteLight.v * 1.6);
+    const SL = storm.light;
+    if (SL && SL.i * 1.1 > noteLight.v * 1.6) set(3, SL.x, SL.y, 420, Math.max(W, H) * 0.8, [0.72, 0.78, 1], SL.i * 1.1);
+    else set(3, W * (0.5 + noteLight.pan * 0.4), H * 0.4, 260, Math.max(W, H) * 0.45, [1, 0.86, 0.7], noteLight.v * 1.6);
   }
 
   let cy = 1, sy = 0, cp = 1, sp = 0;
@@ -1458,6 +1814,7 @@
   // per strand class (normal, faint, depends-on, used-by): half-width in px, alpha
   const STRAND_STYLE = [[1.8, 0.15], [1.4, 0.035], [3.0, 0.7], [3.0, 0.7]];
   const hotDep = [], hotUser = [];
+  let strandK = 1;   // the plain strands fade back in the tree and the city, where the scenery speaks instead
   function drawStrands() {
     hotDep.length = 0; hotUser.length = 0;
     const STEPS = strands.length > 2000 ? 2 : 3;
@@ -1480,7 +1837,7 @@
       if (bl <= 0.01) continue;
       if (cls === 2) { setColor("#4ff3ff", style[1] * bl); hotDep.push(i); }
       else if (cls === 3) { setColor("#ff5fd2", style[1] * bl); hotUser.push(i); }
-      else setColor(l.s.color, (cls === 0 && matchSet ? 0.3 : style[1]) * bl);
+      else setColor(l.s.color, (cls === 0 && matchSet ? 0.3 : style[1]) * bl * strandK);
       if (cls === 1) {   // dimmed background strands: a straight polyline is plenty
         for (let k = 0; k < NP - 1; k++) lineSeg(SX[o + k], SY[o + k], SX[o + k + 1], SY[o + k + 1], hw);
         continue;
@@ -1530,6 +1887,304 @@
         const w = 520 * LS * spacing * tmp.s, h = w * Math.max(0.12, Math.abs(Math.sin(cam.pitch)) * 0.9);
         cr = (light.cr * 255) | 0; cg = (light.cg * 255) | 0; cb = (light.cb * 255) | 0; ca = Math.min(255, light.core * 0.5 * 255) | 0;
         quad(tmp.sx - w, tmp.sy - h, tmp.sx + w, tmp.sy + h, 0, 0, 1, 1, 4);
+      }
+    }
+  }
+
+  // ---------- scenery of the other views: the city's districts and buildings, the tree's branches ----------
+  const camW = { x: 0, y: 0, z: 0 };
+  function camPos() { camW.x = cam.tx + cam.dist * cp * sy; camW.y = cam.ty + cam.dist * sp; camW.z = cam.tz + cam.dist * cp * cy; }
+  // the 8 corners of an axis-aligned box on screen (corner i: bit 0 → x1, bit 1 → y1, bit 2 → z1)
+  const BX = new Float32Array(16);
+  function projBox(x0, y0, z0, x1, y1, z1) {
+    for (let i = 0; i < 8; i++) {
+      project(i & 1 ? x1 : x0, i & 2 ? y1 : y0, i & 4 ? z1 : z0, tmp);
+      if (!tmp.vis) return false;
+      BX[i * 2] = tmp.sx; BX[i * 2 + 1] = tmp.sy;
+    }
+    return true;
+  }
+  // each face as 4 corners in perimeter order, its top edge first (so v runs from the top down)
+  const F_ROOF = [2, 3, 7, 6], F_XP = [3, 7, 5, 1], F_XN = [6, 2, 0, 4], F_ZP = [7, 6, 4, 5], F_ZN = [2, 3, 1, 0];
+  const FACES = [], FSH = [];   // the visible faces of the last box, and their shading
+  function boxFaces(x0, y0, z0, x1, y1, z1) {
+    FACES.length = 0; FSH.length = 0;
+    if (!projBox(x0, y0, z0, x1, y1, z1)) return 0;
+    if (camW.x > x1) { FACES.push(F_XP); FSH.push(0.62); } else if (camW.x < x0) { FACES.push(F_XN); FSH.push(0.62); }
+    if (camW.z > z1) { FACES.push(F_ZP); FSH.push(0.45); } else if (camW.z < z0) { FACES.push(F_ZN); FSH.push(0.45); }
+    if (camW.y > y1) { FACES.push(F_ROOF); FSH.push(1); }
+    return FACES.length;
+  }
+  function faceQuad(q, seed, mode) {
+    quad4(BX[q[0] * 2], BX[q[0] * 2 + 1], BX[q[1] * 2], BX[q[1] * 2 + 1], BX[q[2] * 2], BX[q[2] * 2 + 1], BX[q[3] * 2], BX[q[3] * 2 + 1], seed, 0, seed + 1, 1, mode);
+  }
+  const shade = (rgb, k, tint) => { cr = Math.min(255, rgb[0] * k + tint[0]) | 0; cg = Math.min(255, rgb[1] * k + tint[1]) | 0; cb = Math.min(255, rgb[2] * k + tint[2]) | 0; };
+  // a module's building, part way between its bubble (a small cube) and its full size
+  function prepBox(n, p) {
+    p.fn = 0;
+    const L = n.lc, k = n.mb, cube = n.r * n.bs * sizeScale * 1.3;
+    const w = lerp(cube, L.w * spacing, k), d = lerp(cube, L.d * spacing, k), h0 = lerp(cube, L.h * spacing, k), h = lerp(cube, L.h * spacing * sizeScale, k);
+    const yb = n.wy - h0 / 2;
+    if (!boxFaces(n.wx - w / 2, yb, n.wz - d / 2, n.wx + w / 2, yb + h, n.wz + d / 2)) return;
+    if (!p.fq) { p.fq = new Float32Array(24); p.fk = new Float32Array(3); p.fm = new Uint8Array(3); }
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    for (let f = 0; f < FACES.length; f++) {
+      const q = FACES[f];
+      for (let j = 0; j < 4; j++) {
+        const X = BX[q[j] * 2], Y = BX[q[j] * 2 + 1];
+        p.fq[f * 8 + j * 2] = X; p.fq[f * 8 + j * 2 + 1] = Y;
+        if (X < x0) x0 = X; if (X > x1) x1 = X; if (Y < y0) y0 = Y; if (Y > y1) y1 = Y;
+      }
+      p.fk[f] = FSH[f]; p.fm[f] = q === F_ROOF ? 7 : 8;
+    }
+    p.fn = FACES.length;
+    p.bx0 = x0; p.by0 = y0; p.bx1 = x1; p.by1 = y1; p.boxR = Math.max(x1 - x0, y1 - y0) / 2;
+  }
+  const BOX_TINT = [4, 6, 12];
+  function drawBox(n, p) {
+    const a = sstep(0, 0.45, n.mb) * Math.min(1, n.bl * 2.5);
+    if (a <= 0.01 || !p.fn) return;
+    let rgb = hexRGB(n.color), k = 0.3 * (0.3 + 0.7 * p.a), al = a * (0.45 + 0.55 * p.a);
+    if (p.ring) { rgb = hexRGB(p.ring); k = 0.27; al = a; }
+    if (n === hovered) k *= 1.4;
+    k *= 1 + n.bp * 0.9 + (n.wv || 0) * 0.7;
+    ca = Math.min(255, al * 255) | 0;
+    const seed = (n.i % 997) + 1, q = p.fq;
+    for (let f = 0; f < p.fn; f++) {
+      shade(rgb, k * p.fk[f], BOX_TINT);
+      const o = f * 8;
+      quad4(q[o], q[o + 1], q[o + 2], q[o + 3], q[o + 4], q[o + 5], q[o + 6], q[o + 7], seed, 0, seed + 1, 1, p.fm[f]);
+    }
+  }
+  // the districts: one platform per folder, rising out of the floor as the city appears
+  const cityTop = (y, rise) => (CITY.y0 * LS + (y - CITY.y0 * LS) * rise) * spacing;
+  let cityOrder = [];
+  function drawCity() {
+    const w = modeW.city;
+    if (w < 0.01 || !cityRects.length) return;
+    const rise = sstep(0, 1, w);
+    if (fitTick % 6 === 0 || cityOrder.length !== cityRects.length) {     // parents first, then far before near
+      cityOrder = cityRects.map((r) => { project((r.x0 + r.x1) / 2 * spacing, r.y1 * spacing, (r.z0 + r.z1) / 2 * spacing, tmp); return [r, r.depth * 1e7 - (tmp.depth || 0)]; })
+                           .sort((a, b) => a[1] - b[1]).map((e) => e[0]);
+    }
+    ca = Math.min(255, w * 255) | 0;
+    for (const r of cityOrder) {
+      if (!boxFaces(r.x0 * spacing, cityTop(r.y0, rise), r.z0 * spacing, r.x1 * spacing, cityTop(r.y1, rise), r.z1 * spacing)) continue;
+      const rgb = hexRGB(r.d.color), k = 0.1 + 0.035 * Math.min(4, r.depth);
+      for (let f = 0; f < FACES.length; f++) { shade(rgb, k * FSH[f], [6, 12, 22]); faceQuad(FACES[f], 0, FACES[f] === F_ROOF ? 9 : 8); }
+    }
+    flush(quads);
+  }
+  function inFaces(p, x, y) {          // inside one of a building's (convex) faces on screen
+    for (let f = 0; f < p.fn; f++) {
+      const q = p.fq, o = f * 8;
+      let pos = 0, neg = 0;
+      for (let j = 0; j < 4; j++) {
+        const ax = q[o + j * 2], ay = q[o + j * 2 + 1], bx = q[o + ((j + 1) % 4) * 2], by = q[o + ((j + 1) % 4) * 2 + 1];
+        const c = (bx - ax) * (y - ay) - (by - ay) * (x - ax);
+        if (c > 0) pos++; else if (c < 0) neg++;
+      }
+      if (!pos || !neg) return true;
+    }
+    return false;
+  }
+  // the tree: branches grow out from the root as the view appears, each folder a bright node with
+  // fine spokes to its files, like Gource
+  const DP = [];
+  function drawTree() {
+    const w = modeW.tree;
+    if (w < 0.01 || !dirRoot) return;
+    const maxD = dirs.reduce((m, d) => Math.max(m, d.depth), 1);
+    for (let i = 0; i < dirs.length; i++) {
+      const d = dirs[i];
+      project(d.x * spacing, d.y * spacing, d.z * spacing, tmp);
+      DP[i * 3] = tmp.sx; DP[i * 3 + 1] = tmp.sy; DP[i * 3 + 2] = tmp.vis ? tmp.s : 0; d.k = i;
+    }
+    for (const d of dirs) {
+      const g = clamp01(w * (1 + maxD * 0.18) - d.depth * 0.18);   // how far this branch has grown
+      d.g = g;
+      if (!d.parent || g <= 0 || !DP[d.k * 3 + 2] || !DP[d.parent.k * 3 + 2]) continue;
+      const px = DP[d.parent.k * 3], py = DP[d.parent.k * 3 + 1], x = DP[d.k * 3], y = DP[d.k * 3 + 1];
+      setColor(d.color, 0.5 * w * (selected || matchSet ? 0.5 : 1));
+      lineSeg(px, py, px + (x - px) * g, py + (y - py) * g, 1.5);
+    }
+    for (const n of nodes) {             // spokes from each folder node to its buds
+      const d = n.dir, p = proj[n.i];
+      if (!d || !p.vis || !(d.g > 0.98) || !DP[d.k * 3 + 2] || p.a < 0.05) continue;
+      setColor(n.color, 0.2 * w * p.a * (1 - n.mb));
+      lineSeg(DP[d.k * 3], DP[d.k * 3 + 1], p.sx, p.sy, 0.9);
+    }
+  }
+  function drawTreeNodes() {
+    const w = modeW.tree;
+    if (w < 0.01 || !dirRoot) return;
+    for (const d of dirs) {
+      const s = DP[d.k * 3 + 2];
+      if (!s || !(d.g > 0.9)) continue;
+      const r = Math.max(2.5, Math.min(9, (d === dirRoot ? 9 : 5) * s * LS));
+      setColor(mixHex(d.color), 0.9 * w);
+      quad(DP[d.k * 3] - r, DP[d.k * 3 + 1] - r, DP[d.k * 3] + r, DP[d.k * 3 + 1] + r, 0, 0, 1, 1, 4);
+    }
+  }
+  const mixCache = new Map();
+  function mixHex(hex) {           // a folder node: its colour washed toward white
+    let m = mixCache.get(hex);
+    if (!m) { const v = parseInt(hex.slice(1), 16), f = (c) => Math.round(c + (255 - c) * 0.55).toString(16).padStart(2, "0"); m = "#" + f(v >> 16) + f((v >> 8) & 255) + f(v & 255); mixCache.set(hex, m); }
+    return m;
+  }
+  // folder names: on the districts' far corners in the city, beside the branch nodes in the tree
+  const placed = [];
+  function fits(x0, y0, x1, y1) {
+    for (const r of placed) if (x0 < r[2] && x1 > r[0] && y0 < r[3] && y1 > r[1]) return false;
+    placed.push([x0, y0, x1, y1]);
+    return true;
+  }
+  function placeLabels() {
+    placed.length = 0;
+    const wc = modeW.city, wt = modeW.tree;
+    if (wc > 0.3 && cityRects.length) {
+      const rise = sstep(0, 1, wc), cand = [];
+      for (const r of cityRects) {
+        if (r.depth === 0) continue;
+        const y = cityTop(r.y1, rise);
+        let bx0 = 1e9, bx1 = -1e9, ty = 1e9, tx = 0, ok = true;
+        for (const [x, z] of [[r.x0, r.z0], [r.x1, r.z0], [r.x0, r.z1], [r.x1, r.z1]]) {
+          project(x * spacing, y, z * spacing, tmp);
+          if (!tmp.vis) { ok = false; break; }
+          bx0 = Math.min(bx0, tmp.sx); bx1 = Math.max(bx1, tmp.sx);
+          if (tmp.sy < ty) { ty = tmp.sy; tx = tmp.sx; }
+        }
+        if (ok && bx1 - bx0 > 64 && ty > 60 && ty < H - 20) cand.push([bx1 - bx0, r, tx, ty]);
+      }
+      cand.sort((a, b) => b[0] - a[0]);
+      ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      let shown = 0;
+      for (const [wd, r, x, y] of cand) {
+        if (shown >= 40) break;
+        const fs = Math.round(Math.max(9, Math.min(13, wd / 16)));
+        ctx.font = `600 ${fs}px "JetBrains Mono", monospace`;
+        const text = r.d.name.split("/").pop() + "/", tw = ctx.measureText(text).width;
+        const lx = x - tw / 2 - 6, ly = y + 4;
+        if (!fits(lx, ly, lx + tw + 12, ly + fs + 8)) continue;
+        shown++;
+        mark(lx - 2, ly - 2, lx + tw + 14, ly + fs + 10);
+        ctx.globalAlpha = Math.min(1, (wc - 0.3) * 2) * (selected ? 0.6 : 0.92);
+        roundRect(lx, ly, tw + 12, fs + 8, 4);
+        ctx.fillStyle = "rgba(3,6,14,0.82)"; ctx.fill();
+        ctx.strokeStyle = hexA(r.d.color, 0.45); ctx.lineWidth = 1; ctx.stroke();
+        ctx.fillStyle = "#e6f0ff"; ctx.fillText(text, lx + 6, ly + fs / 2 + 4);
+      }
+      ctx.globalAlpha = 1;
+    }
+    if (wt > 0.3 && dirRoot) {
+      const cand = dirs.filter((d) => DP[d.k * 3 + 2] && d.g > 0.95 && (d.depth <= 1 || d.files.length + d.kids.length >= 3))
+                       .sort((a, b) => (a === dirRoot ? -1 : b === dirRoot ? 1 : b.files.length + b.kids.length * 2 - a.files.length - a.kids.length * 2));
+      ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      let shown = 0;
+      for (const d of cand) {
+        if (shown >= 30) break;
+        const fs = d === dirRoot ? 14 : 11, x = DP[d.k * 3] + 8, y = DP[d.k * 3 + 1] - 8;
+        ctx.font = `700 ${fs}px "Chakra Petch", "JetBrains Mono", sans-serif`;
+        const text = d.name.split("/").pop() || d.name, tw = ctx.measureText(text).width;
+        if (!fits(x - 2, y - fs / 2 - 2, x + tw + 2, y + fs / 2 + 2)) continue;
+        shown++;
+        mark(x - 4, y - fs, x + tw + 4, y + fs);
+        ctx.globalAlpha = Math.min(1, (wt - 0.3) * 2) * (selected || matchSet ? 0.45 : 0.85);
+        ctx.fillStyle = "rgba(4,2,12,0.75)"; ctx.fillText(text, x + 1, y + 1);
+        ctx.fillStyle = mixHex(d.color); ctx.fillText(text, x, y);
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // ---------- the storm ----------
+  // Now and then a storm passes far off behind the room. It builds over a few minutes, lingers and
+  // moves on, and then the void is calm again for a long while. Lightning lights the fog from inside
+  // (sheet lightning), now and then a thin bolt shows far away, and the thunder follows some seconds
+  // later: sooner, deeper and a little louder as the storm comes closer. All of it stays faint.
+  const storm = { on: true, level: 0, phase: "calm", start: 0, until: rand(150, 260), peak: 0.8, nextFlash: 0,
+                  flashes: [], bolts: [], sent: -1, sentAt: 0, light: null };
+  function stormStep(dt) {
+    if (T >= storm.until) {
+      storm.start = T;
+      if (storm.phase === "calm") { storm.phase = "approach"; storm.until = T + rand(150, 240); storm.peak = rand(0.55, 1); storm.nextFlash = T + rand(12, 30); }
+      else if (storm.phase === "approach") { storm.phase = "peak"; storm.until = T + rand(110, 220); }
+      else if (storm.phase === "peak") { storm.phase = "recede"; storm.until = T + rand(150, 240); }
+      else { storm.phase = "calm"; storm.until = T + rand(300, 700); }
+    }
+    const q = clamp01((T - storm.start) / Math.max(1, storm.until - storm.start)), P = storm.peak;
+    const want = !storm.on ? 0 : storm.phase === "approach" ? P * sstep(0, 1, q) : storm.phase === "peak" ? P : storm.phase === "recede" ? P * (1 - sstep(0, 1, q)) : 0;
+    storm.level += (want - storm.level) * (1 - Math.pow(0.6, dt));
+    if (Math.abs(storm.level - storm.sent) > 0.01 && T - storm.sentAt > 0.5) { SFX.storm(storm.level); storm.sent = storm.level; storm.sentAt = T; }
+    if (storm.on && storm.level > 0.05 && T > storm.nextFlash && nodes.length && !document.hidden) {
+      lightning();
+      storm.nextFlash = T + rand(lerp(80, 14, storm.level), lerp(140, 36, storm.level));
+    }
+    let best = null, bi = 0;
+    for (const fl of storm.flashes) { const i = flashI(fl) * fl.power; if (i > bi) { bi = i; best = fl; } }
+    if (best && bi > 0.004) {
+      // each stroke lights a different part of the cloud: the glow crawls about inside it
+      let sx = 0, sy2 = 0, sw = 1e-6;
+      const age = T - best.t0;
+      for (const st of best.strokes) { const a = age - st.t; if (a < 0) continue; const k = st.a * Math.exp(-a / 0.09); sx += st.ox * k; sy2 += st.oy * k; sw += k; }
+      const M = Math.max(W, H);
+      storm.light = { x: (best.fx + sx / sw) * W, y: (best.fy + sy2 / sw) * H, r: best.r * M, cloud: best.cloud * M, i: bi, seed: best.seed };
+    } else storm.light = null;
+    while (storm.flashes.length && T - storm.flashes[0].t0 > storm.flashes[0].end) storm.flashes.shift();
+    while (storm.bolts.length && T - storm.bolts[0].fl.t0 > storm.bolts[0].fl.end) storm.bolts.shift();
+  }
+  function lightning(level = storm.level) {
+    const dist = 0.25 + 0.75 * clamp01(1.08 - level * 0.62 + rand(-0.12, 0.12));   // 0.25 close … 1 far away
+    // mostly the flash stays inside a cloud somewhere far off: a few strokes, each lighting another part of it
+    const fx = rand(0.06, 0.94), fy = rand(-0.1, 0.5) + dist * 0.08, power = (1.3 - dist) * rand(0.6, 1);
+    const spread = rand(0.03, 0.09) * (1.3 - dist);
+    const strokes = [{ t: 0, a: 1, ox: 0, oy: 0 }];
+    let t = 0;
+    for (let k = 0, n = Math.random() < 0.85 ? 1 + ((Math.random() * 4) | 0) : 0; k < n; k++) {
+      t += rand(0.05, 0.22);
+      strokes.push({ t, a: rand(0.3, 0.95), ox: rand(-1, 1) * spread, oy: rand(-0.5, 0.5) * spread });
+    }
+    const fl = { t0: T, fx, fy, r: rand(0.3, 0.5), cloud: rand(0.12, 0.24) * (1.25 - 0.5 * dist), seed: rand(0, 90), power, dist, strokes, end: t + 1.8 };
+    storm.flashes.push(fl);
+    if (dist < 0.6 && Math.random() < 0.08 + 0.3 * level) storm.bolts.push(makeBolt(fl));      // a bolt is the rare one
+    if (dist < 0.9 || Math.random() < 0.5)                                                     // the farthest flicker silently
+      SFX.thunder({ delay: 0.35 + dist * rand(6, 9.5), dist, power, pan: fx * 2 - 1 });
+  }
+  function flashI(fl) {   // the flicker: a few strokes, each a fast decay, then a dim afterglow
+    const age = T - fl.t0;
+    let v = 0;
+    for (const s of fl.strokes) { const a = age - s.t; if (a >= 0) v += s.a * Math.exp(-a / 0.065); }
+    return v + 0.12 * Math.exp(-Math.max(0, age) / 0.5);
+  }
+  function makeBolt(fl) {   // a jagged path down from above the frame, with a few short forks (screen fractions)
+    const paths = [];
+    const crack = (x0, y0, x1, y1, depth, w) => {
+      let pts = [[x0, y0], [x1, y1]];
+      for (let it = 0; it < 6; it++) {
+        const next = [pts[0]];
+        for (let i = 1; i < pts.length; i++) {
+          const a = pts[i - 1], b = pts[i], len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+          next.push([(a[0] + b[0]) / 2 + rand(-0.5, 0.5) * len * 0.4, (a[1] + b[1]) / 2 + rand(-0.15, 0.15) * len * 0.3], b);
+        }
+        pts = next;
+      }
+      paths.push({ pts, w });
+      if (depth < 2) for (let f = 0; f < 2; f++) if (Math.random() < 0.55) {
+        const p = pts[8 + ((Math.random() * (pts.length - 24)) | 0)];
+        crack(p[0], p[1], p[0] + rand(-0.12, 0.12), p[1] + rand(0.06, 0.16), depth + 1, w * 0.55);
+      }
+    };
+    const x0 = fl.fx + rand(-0.05, 0.05);
+    crack(x0, -0.04, x0 + rand(-0.1, 0.1), fl.fy + rand(0.22, 0.42), 0, 1);
+    return { fl, paths };
+  }
+  function drawBolts() {   // additive, behind the bubbles: a soft halo and a hair-thin core
+    for (const b of storm.bolts) {
+      const I = flashI(b.fl) * (1.15 - b.fl.dist) * 0.5;
+      if (I < 0.01) continue;
+      for (const p of b.paths) for (const [hw, al, col] of [[5 * p.w + 1, 0.08, "#8f9cff"], [0.9 * p.w + 0.35, 0.8, "#eef0ff"]]) {
+        setColor(col, Math.min(1, I * al));
+        for (let i = 1; i < p.pts.length; i++) lineSeg(p.pts[i - 1][0] * W, p.pts[i - 1][1] * H, p.pts[i][0] * W, p.pts[i][1] * H, hw);
       }
     }
   }
@@ -1606,7 +2261,18 @@
 
   // adaptive resolution: if frames get slow, render the WebGL layer at a lower pixel ratio
   let showFps = new URLSearchParams(location.search).has("fps");
-  if (showFps) window.CR_debug = { beat: (s = 1) => onBeat(s), flutter: (v = 1) => { flutter = v; }, note: (pan = 0, v = 1) => { noteLight.pan = pan; noteLight.v = v; } };
+  if (showFps) window.CR_debug = { beat: (s = 1) => onBeat(s), flutter: (v = 1) => { flutter = v; }, note: (pan = 0, v = 1) => { noteLight.pan = pan; noteLight.v = v; },
+    // storm(level): bring a storm in now (0 sends it away); flash(level): one stroke of lightning now
+    storm: (lv = 0.9) => { storm.phase = lv ? "peak" : "calm"; storm.peak = lv; storm.start = T; storm.until = T + (lv ? 300 : 600); storm.nextFlash = T + 1; },
+    flash: (lv = 0.8, hold = 0, at = null, bolt = false) => {   // hold: keep it lit for a look; at: [x, y] screen fractions
+      lightning(lv);
+      const fl = storm.flashes[storm.flashes.length - 1];
+      if (at) { fl.fx = at[0]; fl.fy = at[1]; }
+      if (!bolt) storm.bolts = storm.bolts.filter((b) => b.fl !== fl);
+      if (hold && !bolt) { for (let t = 0.05; t < hold; t += 0.05) fl.strokes.push({ t, a: 1, ox: rand(-0.05, 0.05), oy: rand(-0.03, 0.03) }); fl.end = hold + 1.8; }
+      else if (hold) { for (let t = 0.05; t < hold; t += 0.05) fl.strokes.push({ t, a: 1, ox: rand(-0.05, 0.05), oy: rand(-0.03, 0.03) }); fl.end = hold + 1.8; if (!storm.bolts.some((b) => b.fl === fl)) storm.bolts.push(makeBolt(fl)); }
+    },
+    mode: (m) => setMode(m), get state() { return { mode, morph: !!morph, storm: { ...storm, flashes: storm.flashes.length, bolts: storm.bolts.length } }; } };
   function adaptQuality(raw) {
     if (raw > 250) return; // the window was hidden or the machine stalled
     emaMs += (Math.min(raw, 100) - emaMs) * 0.05;
@@ -1639,7 +2305,9 @@
     const dt = Math.min(0.05, raw / 1000); last = now; T += dt;
     adaptQuality(raw);
     tick(); mark2("tick");
-    updateWorld(); mark2("world");
+    updateWorld(); updateModeW(); stormStep(dt); mark2("world");
+    GRAV = lerp(-0.01, 0.045, modeW.city);
+    strandK = modeW.cloud + 0.12 * modeW.tree + 0.07 * modeW.city;
     stepStrands(); mark2("strands");
     if (dragNode) { SFX.dragMove(dragSpeed, dragStretch); dragSpeed *= 0.88; }   // the scrape fades when the hand stops
 
@@ -1652,6 +2320,7 @@
     }
     idle += dt;
     if (spin && !dragging && idle > 1.5) cam.yaw += dt * 0.07;
+    if (morph && !morph.keepPitch && !dragging) cam.pitch = lerp(morph.pitch0, MODE_PITCH[morph.to], sstep(0, 1, (T - morph.t0) / (morph.total * 0.85)));
     const e = 1 - Math.pow(0.02, dt);
     cam.dist += (goal.dist - cam.dist) * e;
     cam.tx += (goal.tx - cam.tx) * e; cam.ty += (goal.ty - cam.ty) * e; cam.tz += (goal.tz - cam.tz) * e;
@@ -1663,6 +2332,10 @@
     }
     updateLight(dt);
     const order = nodes.filter((n) => proj[n.i].vis && proj[n.i].a > 0).sort((a, b) => proj[b.i].depth - proj[a.i].depth);
+    camPos();
+    for (const n of order) { if (n.mb > 0.01 && n.lc) prepBox(n, proj[n.i]); else proj[n.i].fn = 0; }
+    gl.useProgram(spriteProg.p);
+    gl.uniform4fv(spriteProg.loc["u_lpos[0]"], LPOS); gl.uniform4fv(spriteProg.loc["u_lcol[0]"], LCOL);
 
     // ---- WebGL: atmosphere, background, additive light (confetti, floor, strands, pulses), bubbles, front fog ----
     mark2("world");
@@ -1681,24 +2354,31 @@
     }
     flush(quads);
 
+    drawBolts();
     drawFloor();
+    flush(lines);
+    if (modeW.city > 0.01) { gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); drawCity(); gl.blendFunc(gl.ONE, gl.ONE); }
+    drawTree();
     drawStrands();
     flush(lines); mark2("lines");
     drawPulses();
     drawGlows();
+    drawTreeNodes();
     flush(quads);
 
     // bubbles, back to front: dark core, wrapped code, glassy shell, then the light on it
+    // (in the city, its building: the bubble melts into it as it lands)
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     texBudget = 3;
-    gl.useProgram(spriteProg.p);
-    gl.uniform4fv(spriteProg.loc["u_lpos[0]"], LPOS); gl.uniform4fv(spriteProg.loc["u_lcol[0]"], LCOL);
     for (const n of order) {
       const p = proj[n.i];
+      if (p.fn) drawBox(n, p);
+      const bub = 1 - sstep(0.15, 0.7, n.mb);
+      if (bub < 0.01) { p.R = p.boxR; continue; }
       const grow = Math.min(1, (T - n.born) / 1.2), pop = grow < 1 ? 1 - Math.pow(1 - grow, 3) + Math.sin(grow * Math.PI) * 0.25 : 1;
       const R = p.R = n.r * n.bs * sizeScale * p.s * (n === hovered || n === dragNode ? 1.08 : 1) * pop;
       if (R < 0.6) continue;
-      const fade = p.fade = p.a * Math.max(0.3, Math.min(1, p.s * 1.4)) * Math.min(1, n.bl * 2.5);
+      const fade = p.fade = p.a * Math.max(0.3, Math.min(1, p.s * 1.4)) * Math.min(1, n.bl * 2.5) * bub;
       const x = p.sx, y = p.sy;
       setColor("#07051a", fade * 0.6);
       quad(x - R * 0.97, y - R * 0.97, x + R * 0.97, y + R * 0.97, 0, 0, 1, 1, 0);
@@ -1727,7 +2407,7 @@
     for (const n of order) {
       const p = proj[n.i], R = p.R;
       if (!(R >= 0.6)) continue;
-      if (p.ring) {
+      if (p.ring && n.mb < 0.5) {
         mark(p.sx - R - 6, p.sy - R - 6, p.sx + R + 6, p.sy + R + 6);
         ctx.globalAlpha = 0.6 + 0.4 * Math.sin(T * 4);
         ctx.strokeStyle = p.ring; ctx.lineWidth = n === selected ? 2 : 1.4;
@@ -1747,6 +2427,7 @@
     }
     ctx.globalAlpha = 1;
 
+    placeLabels();
     // labels: small ones for context, name cards for the biggest, full cards for the focus
     const full = new Set([selected, hovered].filter(Boolean));
     for (const n of order) {
@@ -1775,6 +2456,7 @@
     for (const n of nodes) {
       const p = proj[n.i];
       if (!p || !p.vis || p.a < 0.05 || n.bl < 0.5) continue;
+      if (n.mb > 0.5 && p.fn) { if (p.depth < bestDepth && inFaces(p, x, y)) { best = n; bestDepth = p.depth; } continue; }
       const R = Math.max(6, n.r * n.bs * sizeScale * p.s);
       const dx = x - p.sx, dy = y - p.sy;
       if (dx * dx + dy * dy < R * R && p.depth < bestDepth) { best = n; bestDepth = p.depth; }
@@ -1813,7 +2495,7 @@
       }
       const dx = e.clientX - down.x, dy = e.clientY - down.y;
       if (Math.abs(dx) + Math.abs(dy) > 4) moved = true;
-      if (down.node && moved) {
+      if (down.node && moved && mode === "cloud" && !morph) {
         if (!dragNode) {
           const wires = [...down.node.outL.map((l) => [l.t, l.refs]), ...down.node.incL.map((l) => [l.s, l.refs])]
             .sort((a, b) => b[1] - a[1]).slice(0, 4).map(([w]) => ({ id: w.id, funcs: w.funcs }));
@@ -1826,7 +2508,7 @@
         dragNode = down.node;
         alpha = Math.max(alpha, 0.06);
         dragBy(dragNode, e.clientX - down.lx, e.clientY - down.ly);
-      } else if (!down.node) {
+      } else if (!down.node || mode !== "cloud" || morph) {
         cam.yaw = down.yaw - dx * 0.006;
         cam.pitch = Math.max(-1.3, Math.min(1.3, down.pitch + dy * 0.005));
       }
@@ -1882,7 +2564,7 @@
     }
   }
 
-  function aimAt(n) { goal.tx = n.x * spacing; goal.ty = n.y * spacing; goal.tz = n.z * spacing; }
+  function aimAt(n) { const P = posIn(n, mode); goal.tx = P.x * spacing; goal.ty = P.y * spacing; goal.tz = P.z * spacing; }
 
   function select(n, keepCamera) {
     const was = selected;
@@ -1936,6 +2618,17 @@
   toggle($("tLabels"), (v) => (allLabels = v));
   toggle($("tPhys"), (v) => (physics = v));
   toggle($("tSpin"), (v) => (spin = v));
+
+  // ---------- views (remembered per browser) ----------
+  for (const b of document.querySelectorAll("#views button")) b.onclick = () => { if (b.dataset.mode !== mode) setMode(b.dataset.mode); };
+  try { const m = localStorage.getItem("coderoom.mode"); if (MODES.includes(m)) setMode(m, { instant: true }); } catch (_) {}
+  requestAnimationFrame(placePill);
+  document.fonts && document.fonts.ready.then(placePill);
+  window.addEventListener("resize", placePill);
+  // the storm comes and goes on its own; this only lets it (remembered per browser)
+  try { storm.on = localStorage.getItem("coderoom.storm") !== "off"; } catch (_) {}
+  $("tStorm").setAttribute("aria-pressed", storm.on);
+  toggle($("tStorm"), (v) => { storm.on = v; try { localStorage.setItem("coderoom.storm", v ? "on" : "off"); } catch (_) {} });
 
   // ---------- Size / Spread sliders (remembered per browser) ----------
   function loadView() { try { return JSON.parse(localStorage.getItem("coderoom.view") || "{}"); } catch (_) { return {}; } }
@@ -2037,6 +2730,8 @@
     if (e.key === "u" || e.key === "U") rescan();
     if (e.key === "f" || e.key === "F") { showFps = !showFps; $("fps").textContent = ""; }
     if (e.key === "o" || e.key === "O") { e.preventDefault(); $("repoBtn").click(); }
+    if (e.key >= "1" && e.key <= "3") setMode(MODES[+e.key - 1]);
+    if (e.key === "v" || e.key === "V") setMode(MODES[(MODES.indexOf(mode) + 1) % MODES.length]);
   });
 
   // ---------- boot: ?root=…, else the last repository, else the welcome screen ----------

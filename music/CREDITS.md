@@ -25,5 +25,28 @@ personal, non-commercial app.
 - **Ozzed** — *Dragspel i Natten* (CC BY-SA) — https://ozzed.net/music/nackskott.shtml → `ozzed_dragspel_i_natten.mp3`
 - **Ozzed** — *A Calmer Day* (CC BY-SA) — https://ozzed.net/music/dunes-at-night.shtml → `ozzed_a_calmer_day.mp3`
 
+### Keygen music
+
+Public Domain modules in the keygen / cracktro style, bundled (played by Code Room's own ProTracker and
+FastTracker 2 engines, unmodified):
+
+- **Drozerix** — *Keygen Wraith* (Public Domain) — https://modarchive.org/index.php?request=view_by_moduleid&query=207854 → `drozerix_keygen_wraith.xm`
+- **Drozerix** — *Keygen 9000* (Public Domain) — https://modarchive.org/index.php?request=view_by_moduleid&query=173938 → `drozerix_keygen_9000.xm`
+- **Drozerix** — *Reloaded Insanity* (Public Domain) — https://modarchive.org/index.php?request=view_by_moduleid&query=177968 → `drozerix_reloaded_insanity.xm`
+- **Drozerix** — *Bit Loader* (Public Domain) — https://modarchive.org/index.php?request=view_by_moduleid&query=178415 → `drozerix_bit_loader.xm`
+- **Drozerix** — *Fluxchip* (Public Domain) — https://modarchive.org/index.php?request=view_by_moduleid&query=200310 → `drozerix_fluxchip.xm`
+- **Drozerix** — *Silicon Dancer* (Public Domain) — https://modarchive.org/index.php?request=view_by_moduleid&query=209692 → `drozerix_silicon_dancer.mod`
+- **Drozerix** — *Neon Techno* (Public Domain) — https://modarchive.org/index.php?request=view_by_moduleid&query=178172 → `drozerix_neon_techno.mod`
+- **Drozerix** — *Cyber Spider* (Public Domain) — https://modarchive.org/index.php?request=view_by_moduleid&query=192354 → `drozerix_cyber_spider.xm`
+- **Drozerix** — *Air Ride* (Public Domain) — https://modarchive.org/index.php?request=view_by_moduleid&query=213325 → `drozerix_air_ride.mod`
+- **Drozerix** — *Master Select* (Public Domain) — https://modarchive.org/index.php?request=view_by_moduleid&query=190186 → `drozerix_master_select.xm`
+
+Real scene classics (Razor 1911, Paradox and Fairlight keygens and cracktros, Dubmood's keygen edit of
+*Mario Airlines*, Beldoroon's Paradox themes) are under the **Mod Archive Distribution license**, which
+allows passing a module on only as the original, unbundled file. They are therefore **not included**:
+`music/playlist.json` lists them with `"remote": <module id>`, and the first time the radio picks one, the
+local server downloads it from The Mod Archive into `~/Library/Caches/Code Room/modules/` (the same as
+saving it from the site) and plays it from there, unmodified. Offline, the radio simply skips them.
+
 Licenses: CC BY 4.0 https://creativecommons.org/licenses/by/4.0/ · CC BY-SA https://creativecommons.org/licenses/by-sa/3.0/ ·
 CC BY-NC-SA https://creativecommons.org/licenses/by-nc-sa/3.0/ · Public Domain as declared on The Mod Archive.
