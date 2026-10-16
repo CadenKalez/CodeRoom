@@ -28,6 +28,24 @@ cloud of glowing "code bubbles" joined by swaying strands (inspired by the Code 
   selection/neighbour halos, bloom-wave halos and the core's pool of light on the floor.
 - Measured in Chromium at 60 fps, 6–9 ms JS on SC4-Decomp; **not yet measured in the WebKit app** (press F).
 
+## Done (2026-10-16, later)
+
+- **Views**: `setMode()` in `index.html` (Cloud / Branches / City, corner switcher `#views`, keys 1-3/V).
+  `buildDirs()` + `layoutTree()` (balloon tree, Gource-like) + `layoutCity()` (squarified treemap) put
+  each node's place in `n.lt` / `n.lc`; `updateWorld()` flies nodes between views (`morph`, per-node
+  delay `n.md`, curved path), `n.mb` is how much a node is a building. Buildings and district platforms
+  are box faces in the sprite batch (`quad4`, shader modes 7-9, needs `OES_standard_derivatives`).
+  Strands arch upward over the city (`GRAV` follows `modeW.city`).
+- **Storm**: `stormStep()` / `lightning()` in `index.html` (phases calm → approach → peak → recede);
+  the lit cloud is drawn into the atmosphere emit target's alpha (`u_flash`) and scattered by
+  `atmScatterProg`; bolts are rare (`makeBolt`). `CR_debug.storm(lv)`, `CR_debug.flash(lv, hold, [x, y])`
+  with `?fps`. Sound: `SFX.storm(level)` / `SFX.thunder({delay, dist, power, pan})` in `sound.js`;
+  thunder takes are decoded lazily (`bank.lazy.thunder`, at most 5 in memory).
+- **Melodies**: `compose()` / `playPhrase()` / `melody()` in `sound.js` (piano, Iowa violin + flute).
+  `CodeRoomSound.phrase("violin")` plays one now.
+- **Keygen radio**: `parseXM()` / `xmPlayer()` (FastTracker 2). Bundled PD Drozerix tracks; scene
+  classics are `"remote"` playlist entries fetched by `server.py` (`/music/remote/<id>`) into the cache.
+
 ## How to verify (do this, don't guess)
 
 - **Visuals/FPS:** run `python3 server.py --port 8765` and use the built-in browser pane at
@@ -55,6 +73,17 @@ cloud of glowing "code bubbles" joined by swaying strands (inspired by the Code 
 - Don't reference `let/const` declared later in `index.html` from code that runs at load (TDZ).
 - The adaptive resolution logic must not react to load hitches (`settle()` after loads/resizes);
   the user notices blur immediately.
+- In WebKit a GPU-backed 2D canvas used as a WebGL texture source is read back from the GPU process
+  synchronously, waiting for the frame in flight (~4 ms a call). Canvases that feed `texSubImage2D`
+  are made with `{ willReadFrequently: true }` (CPU-backed, ~2 ms).
+- The code atlases hold 144 + 64 slots, fewer than the bubbles that want code on big repos.
+  `rankCode()` gives slots to the biggest bubbles on screen, and `codeSlot()` never takes a slot from a
+  bubble drawn in the last frame. The plain LRU used to evict bubbles still on screen and redraw 3
+  slots every frame (9–12 ms of JS in WebKit, Cloud only).
+- Strands are instanced (`ANGLE_instanced_arrays`): `STRAND_VS` rebuilds on the GPU the same curve
+  `drawStrandsCPU()` draws (the fallback). Change both together; they render within 1 level per pixel.
+  After an instanced draw, reset `vertexAttribDivisorANGLE(loc, 0)`: WebGL1 has no VAOs, so a leftover
+  divisor breaks the next batch that uses that attribute slot.
 - `recent.json` (`~/Library/Application Support/Code Room/`) is shared by the app and browser mode;
   browser tests change which repo the app opens next. Restore the user's repo (`SC4-Decomp/src`)
   after testing.

@@ -25,6 +25,7 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.request
 import webbrowser
 from collections import Counter, defaultdict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -771,8 +772,46 @@ def clean_path(p):
     return os.path.realpath(os.path.expanduser(p.strip()))
 
 
-SAMPLE_NAME = re.compile(r"[A-Za-z0-9_-]+\.(?:m4a|flac|json|mod|mp3)")
-SAMPLE_TYPES = {".m4a": "audio/mp4", ".flac": "audio/flac", ".json": "application/json", ".mod": "application/octet-stream", ".mp3": "audio/mpeg"}
+SAMPLE_NAME = re.compile(r"[A-Za-z0-9_-]+\.(?:m4a|flac|json|mod|xm|mp3)")
+SAMPLE_TYPES = {".m4a": "audio/mp4", ".flac": "audio/flac", ".json": "application/json", ".mod": "application/octet-stream",
+                ".xm": "application/octet-stream", ".mp3": "audio/mpeg"}
+
+# Scene classics (keygen / cracktro tunes) whose license lets them be passed on only as the original,
+# unbundled file: they're not shipped with Code Room. The first time the radio picks one, it's downloaded
+# from The Mod Archive into the user's cache, the same as saving it from the site. Only the module ids
+# listed in music/playlist.json are ever fetched.
+if sys.platform == "darwin":
+    MODULE_CACHE = os.path.expanduser("~/Library/Caches/Code Room/modules")
+else:
+    MODULE_CACHE = os.path.join(os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache"), "coderoom", "modules")
+_module_lock = threading.Lock()
+
+
+def remote_ids():
+    try:
+        with open(os.path.join(HERE, "music", "playlist.json"), encoding="utf-8") as f:
+            return {int(e["remote"]) for e in json.load(f) if e.get("remote")}
+    except (OSError, ValueError, KeyError, TypeError):
+        return set()
+
+
+def fetch_module(mid):
+    path = os.path.join(MODULE_CACHE, f"{mid}.bin")
+    with _module_lock:
+        if os.path.isfile(path):
+            return path
+        req = urllib.request.Request(f"https://api.modarchive.org/downloads.php?moduleid={mid}", headers={"User-Agent": "CodeRoom/1.0"})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            data = r.read(4 * 1024 * 1024 + 1)
+        is_xm = data[:17] == b"Extended Module: "
+        is_mod = data[1080:1084] in (b"M.K.", b"M!K!", b"4CHN", b"FLT4")
+        if len(data) > 4 * 1024 * 1024 or not (is_xm or is_mod):
+            raise ValueError("not a module")
+        os.makedirs(MODULE_CACHE, exist_ok=True)
+        with open(path + ".part", "wb") as f:
+            f.write(data)
+        os.replace(path + ".part", path)
+    return path
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -804,6 +843,17 @@ class Handler(BaseHTTPRequestHandler):
         if url.path == "/sound.js":
             with open(os.path.join(HERE, "sound.js"), "rb") as f:
                 return self._send(200, f.read(), "text/javascript; charset=utf-8")
+        remote = re.fullmatch(r"/music/remote/(\d{1,7})", url.path)
+        if remote:
+            mid = int(remote.group(1))
+            if mid not in remote_ids():
+                return self._send(404, b"not found", "text/plain")
+            try:
+                path = fetch_module(mid)
+            except Exception as err:  # offline, or the archive is down: the radio just picks something else
+                return self._send(502, f"can't fetch module {mid}: {err}".encode(), "text/plain")
+            with open(path, "rb") as f:
+                return self._send(200, f.read(), "application/octet-stream", "no-cache")
         if url.path.startswith(("/samples/", "/music/")):
             # the bundled sample pack and music: plain file names only, never a path
             folder, name = url.path[1:].split("/", 1)
