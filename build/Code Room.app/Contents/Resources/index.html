@@ -701,7 +701,7 @@
   // where a module lives in a view (layout units) and how big its bubble is there
   function posIn(n, m) { return m === "tree" && n.lt ? n.lt : m === "city" && n.lc ? n.lc : n; }
   function sizeIn(n, m) { return m === "tree" && n.lt ? n.lt.s : m === "city" && n.lc ? 0.5 : 1; }
-  function relayout() { buildDirs(); layoutTree(); layoutCity(); }
+  function relayout() { buildDirs(); layoutTree(); layoutCity(); walkers = []; puffs = []; }
 
   // Switch views: every bubble flies from wherever it is now to its place in the new view, along a
   // curve that lifts it up through the void, staggered so the change sweeps across the scene
@@ -1018,6 +1018,13 @@
       vec2 n = vec2(-d.y, d.x) / (len > 0.0 ? len : 1e-3) * abs(a_hw);
       gl_Position = clip((a_seg.y > 0.5 ? B : A) + n * a_seg.z);
     }`;
+  const NOISE = `
+    float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float vnoise(vec2 p) {
+      vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+      return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+    }
+    float fbm(vec2 p) { float v = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { v += a * vnoise(p); p = p * 2.03 + vec2(17.1, 9.2); a *= 0.5; } return v; }`;
   // bubbles, confetti and pulses: textured or procedural quads, picked by a_mode (and the city's box faces:
   // their edges are drawn a pixel wide wherever the face is, which needs screen-space derivatives)
   const DERIV = !!gl.getExtension("OES_standard_derivatives");
@@ -1031,8 +1038,15 @@
     uniform vec4 u_lpos[4];   // moving lights: x, y (px), height in front of the scene (px), reach (px)
     uniform vec4 u_lcol[4];   // their colour and intensity
     ${DERIV ? "vec2 fw(vec2 v) { return fwidth(v); }" : "vec2 fw(vec2 v) { return vec2(0.03); }"}
+    ${NOISE}
     float h1(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
     void main() {
+      if (v_mode > 9.5) {                       // city fog: a soft, billowing puff (coherent noise in screen space)
+        vec2 q = v_uv * 2.0 - 1.0;
+        float d = fbm(v_pos * 0.006 + v_uv * 1.7), a = v_col.a * exp(-dot(q, q) * 2.4) * smoothstep(0.15, 0.75, d);
+        gl_FragColor = vec4(v_col.rgb * a, a);
+        return;
+      }
       if (v_mode > 6.5) {                       // city: a face of a box (7 building roof, 8 wall, 9 district platform)
         vec2 f = vec2(fract(v_uv.x), v_uv.y), px = fw(f);
         float seed = floor(v_uv.x);
@@ -1114,13 +1128,6 @@
   // scatter (same size): each pixel marches toward the core and toward the sky light gathering what
   //   shines through the gaps between the bubbles; the fog takes that light in and glows with it.
   //   rgb lights the background, a is the fog that lies faintly over the bubbles too.
-  const NOISE = `
-    float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-    float vnoise(vec2 p) {
-      vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
-      return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
-    }
-    float fbm(vec2 p) { float v = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { v += a * vnoise(p); p = p * 2.03 + vec2(17.1, 9.2); a *= 0.5; } return v; }`;
   const atmEmitProg = program(FULL_VS, HIGHP + NOISE + `
     uniform vec2 u_res; uniform vec2 u_size; uniform float u_time; uniform vec2 u_drift;
     uniform vec4 u_core; uniform vec3 u_sky;
@@ -1227,7 +1234,7 @@
   let cr = 0, cg = 0, cb = 0, ca = 0; // current vertex colour, as bytes
   const rgbCache = new Map();
   const hexRGB = (hex) => { let c = rgbCache.get(hex); if (!c) { const v = parseInt(hex.slice(1), 16); c = [v >> 16, (v >> 8) & 255, v & 255]; rgbCache.set(hex, c); } return c; };
-  const CYAN = [79, 243, 255], PINK = [255, 95, 210];
+  const CYAN = [79, 243, 255], PINK = [255, 95, 210], ZAP_RGB = [200, 235, 255];
   function setColor(hex, a) {
     let c = rgbCache.get(hex);
     if (!c) { const v = parseInt(hex.slice(1), 16); c = [v >> 16, (v >> 8) & 255, v & 255]; rgbCache.set(hex, c); }
@@ -1319,7 +1326,7 @@
     gl.uniform4f(L.u_core, light.sx, light.sy, light.r, light.vis ? light.core * (1 + 0.6 * light.kick) : 0);
     gl.uniform3f(L.u_sky, light.skyX, light.skyY, light.sky);
     const FL = storm.light;
-    gl.uniform4f(L.u_flash, FL ? FL.x : 0, FL ? FL.y : 0, FL ? FL.cloud : 1, FL ? Math.min(0.3, FL.i * 0.2) : 0);
+    gl.uniform4f(L.u_flash, FL ? FL.x : 0, FL ? FL.y : 0, FL ? FL.cloud : 1, FL ? Math.min(0.45, FL.i * 0.3) : 0);
     gl.uniform2f(L.u_fseed, FL ? FL.seed : 0, FL ? FL.seed * 0.37 : 0);
     fullscreen(atmEmitProg);
     // the bubbles stand in the light's way
@@ -1347,7 +1354,7 @@
     gl.uniform1f(L.u_fog, 0.55 + 0.25 * musicLevel);
     const SL = storm.light;
     gl.uniform4f(L.u_flash, SL ? SL.x / W : 0, SL ? 1 - SL.y / H : 0, SL ? SL.r / W : 1, SL ? SL.i * 0.02 : 0); gl.uniform1f(L.u_asp, H / W);
-    gl.uniform2f(L.u_flashUV, SL ? SL.x / W : 0, SL ? 1 - SL.y / H : 0); gl.uniform1f(L.u_flashK, SL ? 0.32 : 0);
+    gl.uniform2f(L.u_flashUV, SL ? SL.x / W : 0, SL ? 1 - SL.y / H : 0); gl.uniform1f(L.u_flashK, SL ? 0.42 : 0);
     fullscreen(atmScatterProg);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, glCanvas.width, glCanvas.height);
   }
@@ -1599,7 +1606,7 @@
     selected = hovered = dragNode = null; treeSet = matchSet = null; $("panel").classList.remove("open");
     q.value = ""; hits = []; renderResults();
     alpha = 1; LS = 1; userZoomed = false; bloom = null;
-    morph = null; dirs = []; dirRoot = null; cityRects = []; cityOrder = [];
+    morph = null; dirs = []; dirRoot = null; cityRects = []; cityOrder = []; walkers = []; puffs = [];
     cam.dist = 2200; cam.tx = cam.ty = cam.tz = 0; goal.tx = goal.ty = goal.tz = 0; focus.x = focus.y = focus.z = 0;
   }
 
@@ -2151,7 +2158,7 @@
     let rgb = hexRGB(n.color), k = 0.3 * (0.3 + 0.7 * p.a), al = a * (0.45 + 0.55 * p.a);
     if (p.ring) { rgb = hexRGB(p.ring); k = 0.27; al = a; }
     if (n === hovered) k *= 1.4;
-    k *= 1 + n.bp * 0.9 + (n.wv || 0) * 0.7;
+    k *= 1 + n.bp * 0.9 + (n.wv || 0) * 0.7 + (zaps.size ? zapI(n) * 3 : 0);
     ca = Math.min(255, al * 255) | 0;
     const seed = (n.i % 997) + 1, q = p.fq;
     for (let f = 0; f < p.fn; f++) {
@@ -2322,7 +2329,7 @@
     if (Math.abs(storm.level - storm.sent) > 0.01 && T - storm.sentAt > 0.5) { SFX.storm(storm.level); storm.sent = storm.level; storm.sentAt = T; }
     if (storm.on && storm.level > 0.05 && T > storm.nextFlash && nodes.length && !document.hidden) {
       lightning();
-      storm.nextFlash = T + rand(lerp(90, 28, storm.level), lerp(150, 70, storm.level));
+      storm.nextFlash = T + rand(lerp(50, 9, storm.level), lerp(90, 26, storm.level));
     }
     let best = null, bi = 0;
     for (const fl of storm.flashes) { const i = flashI(fl) * fl.power; if (i > bi) { bi = i; best = fl; } }
@@ -2337,7 +2344,7 @@
     while (storm.flashes.length && T - storm.flashes[0].t0 > storm.flashes[0].end) storm.flashes.shift();
     while (storm.bolts.length && T - storm.bolts[0].fl.t0 > storm.bolts[0].fl.end) storm.bolts.shift();
   }
-  function lightning(level = storm.level) {
+  function lightning(level = storm.level, force = null) {
     const dist = 0.25 + 0.75 * clamp01(1.08 - level * 0.62 + rand(-0.12, 0.12));   // 0.25 close … 1 far away
     // mostly the flash stays inside a cloud somewhere far off: a few strokes, each lighting another part of it
     const fx = Math.random() < 0.5 ? rand(0.03, 0.32) : rand(0.68, 0.97), fy = rand(-0.12, 0.3) + dist * 0.06, power = (1.3 - dist) * rand(0.6, 1);
@@ -2350,9 +2357,91 @@
     }
     const fl = { t0: T, fx, fy, r: rand(0.3, 0.5), cloud: rand(0.12, 0.24) * (1.25 - 0.5 * dist), seed: rand(0, 90), power, dist, strokes, end: t + 1.8 };
     storm.flashes.push(fl);
-    if (dist < 0.55 && Math.random() < 0.04 + 0.12 * level) storm.bolts.push(makeBolt(fl));     // a bolt is the rare one
+    const bolt = force === "strike" || force === "bolt" || (dist < 0.6 && Math.random() < 0.1 + 0.25 * level);
+    const target = bolt && (force === "strike" || (force !== "bolt" && Math.random() < 0.5)) ? strikeTarget() : null;
+    if (target) {                                                              // it comes down on a bubble
+      const p = proj[target.i];
+      fl.fx = p.sx / W; fl.fy = Math.max(-0.05, p.sy / H - rand(0.25, 0.45)); fl.dist = 0.3; fl.power = 1.1;
+      storm.bolts.push(makeBolt(fl, target));
+      strike(target);
+      SFX.thunder({ delay: 0.12, dist: 0.25, power: 1, pan: fl.fx * 2 - 1 });
+      return;
+    }
+    if (bolt) storm.bolts.push(makeBolt(fl));
     if (dist < 0.9 || Math.random() < 0.5)                                                     // the farthest flicker silently
       SFX.thunder({ delay: 0.35 + dist * rand(6, 9.5), dist, power, pan: fx * 2 - 1 });
+  }
+  // A strike: sparks spray off the bubble it hits, and the charge runs out along its references, bubble to
+  // bubble, a hop every tenth of a second, weaker each time and fraying as it spreads, then it's gone.
+  const sparks = [], zaps = new Map();       // zaps: bubble → { t: the charge arrives, s: its strength, from }
+  function strikeTarget() {
+    const cand = order.filter((n) => { const p = proj[n.i]; return p.a > 0.5 && p.sx > 40 && p.sx < W - 40 && p.sy > 90 && p.sy < H - 60 && (n.out.length + n.inc.length) > 0; });
+    if (!cand.length) return null;
+    cand.sort((a, b) => b.r - a.r);
+    return cand[(Math.random() * Math.min(cand.length, 30)) | 0];             // one of the bigger bubbles in view
+  }
+  function setZap(n, t, s, from) { const z = zaps.get(n); if (!z || z.s < s) zaps.set(n, { t, s, from }); }
+  function zapI(n) {
+    const z = zaps.get(n);
+    if (!z) return 0;
+    const a = T - z.t;
+    return a < 0 ? 0 : z.s * Math.exp(-a / 0.5) * (1 + 0.6 * Math.sin(a * 70) * Math.exp(-a / 0.15));   // a flicker, then it fades
+  }
+  function strike(n) {
+    const p = proj[n.i];
+    for (let k = 0; k < 56; k++) {
+      const a = rand(0, Math.PI * 2), v = rand(90, 520);
+      sparks.push({ x: p.sx, y: p.sy, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 140, t: T, life: rand(0.35, 1.0), hot: Math.random() < 0.35 });
+    }
+    const seen = new Set([n]);
+    let front = [n];
+    setZap(n, T, 1.4, null);
+    for (let d = 1; d <= 6 && front.length; d++) {
+      const next = [];
+      for (const a of front) for (const b of a.out.concat(a.inc)) {
+        if (seen.has(b) || seen.size > 160 || !visible(b) || (d > 2 && Math.random() < 0.35)) continue;
+        seen.add(b); next.push(b);
+        setZap(b, T + d * 0.11 + rand(0, 0.05), 1.1 * Math.pow(0.7, d), a);
+      }
+      front = next.slice(0, 40);
+    }
+    SFX.zap({ pan: Math.max(-0.9, Math.min(0.9, (p.sx / W) * 2 - 1)), hops: seen.size });
+  }
+  let zapLast = 0;
+  function drawZaps() {   // additive, over the bubbles: the charge's arcs and pulses, then the sparks
+    const dt = Math.min(0.05, T - zapLast); zapLast = T;
+    if (!zaps.size && !sparks.length) return;
+    gl.blendFunc(gl.ONE, gl.ONE);
+    for (const [n, z] of zaps) {
+      const age = T - z.t;
+      if (age > 3) { zaps.delete(n); continue; }
+      if (!z.from || age > 0.35 || age < -0.12) continue;
+      const a = proj[z.from.i], b = proj[n.i];
+      if (!a.vis || !b.vis) continue;
+      const u = Math.min(1, 1 + age / 0.11);                                  // the pulse runs from the last bubble to this one
+      const x = a.sx + (b.sx - a.sx) * u, y = a.sy + (b.sy - a.sy) * u, fade = age > 0 ? Math.exp(-age / 0.12) : 1;
+      // a crackling arc: the straight line broken into a few jittered pieces
+      let px = a.sx, py = a.sy;
+      for (let k = 1; k <= 5; k++) {
+        const f = (k / 5) * u, jx = k < 5 ? rand(-6, 6) : 0, jy = k < 5 ? rand(-6, 6) : 0;
+        const qx = a.sx + (b.sx - a.sx) * f + jx, qy = a.sy + (b.sy - a.sy) * f + jy;
+        setColor("#9fdcff", 0.25 * z.s * fade); lineSeg(px, py, qx, qy, 4);
+        setColor("#f2fbff", 0.9 * z.s * fade); lineSeg(px, py, qx, qy, 1);
+        px = qx; py = qy;
+      }
+      setColor("#e8f7ff", Math.min(1, z.s * fade)); const r = 10 * Math.max(0.6, z.s);
+      quad(x - r, y - r, x + r, y + r, 0, 0, 1, 1, 4);
+    }
+    for (let i = sparks.length - 1; i >= 0; i--) {
+      const s = sparks[i], age = T - s.t;
+      if (age > s.life) { sparks.splice(i, 1); continue; }
+      s.vy += 620 * dt; s.vx *= 0.985; s.x += s.vx * dt; s.y += s.vy * dt;
+      const k = 1 - age / s.life;
+      setColor(s.hot ? "#fffbe8" : k > 0.5 ? "#bfe8ff" : "#ffcf7a", k);
+      lineSeg(s.x, s.y, s.x - s.vx * 0.025, s.y - s.vy * 0.025, s.hot ? 1.5 : 1.1);
+    }
+    flush(lines); flush(quads);
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
   }
   function flashI(fl) {   // the flicker: a few strokes, each a fast decay, then a dim afterglow
     const age = T - fl.t0;
@@ -2360,7 +2449,7 @@
     for (const s of fl.strokes) { const a = age - s.t; if (a >= 0) v += s.a * (1 - Math.exp(-a / 0.035)) * Math.exp(-a / 0.16); }   // a soft swell, not a strobe
     return v + 0.06 * Math.exp(-Math.max(0, age) / 0.9);
   }
-  function makeBolt(fl) {   // a jagged path down from above the frame, with a few short forks (screen fractions)
+  function makeBolt(fl, node = null) {   // a jagged path down from above the frame, with a few short forks (screen fractions)
     const paths = [];
     const crack = (x0, y0, x1, y1, depth, w) => {
       let pts = [[x0, y0], [x1, y1]];
@@ -2378,6 +2467,11 @@
         crack(p[0], p[1], p[0] + rand(-0.12, 0.12), p[1] + rand(0.06, 0.16), depth + 1, w * 0.55);
       }
     };
+    if (node) {                                                               // straight down onto the bubble it strikes
+      const p = proj[node.i], tx = p.sx / W, ty = p.sy / H;
+      crack(tx + rand(-0.12, 0.12), -0.04, tx, ty, 0, 1.4);
+      return { fl, paths, node, tx, ty };
+    }
     const x0 = fl.fx + rand(-0.05, 0.05);
     crack(x0, -0.04, x0 + rand(-0.1, 0.1), fl.fy + rand(0.22, 0.42), 0, 1);
     return { fl, paths };
@@ -2388,18 +2482,23 @@
   const moteBots = [0, 1].map(() => ({ x: rand(-900, 900), y: rand(-650, 650), z: rand(-900, 900), v: rand(0.05, 0.11), ph: rand(0, 6.28) }));
   let botCell = null;
   function robotCell() {
-    const g = sprAtlas.canvas.getContext("2d"), x = 7 * SPR, y = SPR, px = 12;
-    const ox = x + (SPR - 18 * px) / 2, oy = y + (SPR - 16 * px) / 2;
-    const R = (cx, cy, w, h, c) => { g.fillStyle = c; g.fillRect(ox + cx * px, oy + cy * px, w * px, h * px); };
+    // the cell holds four frames (128 px each): hovering, two walking steps, and a spare
+    const g = sprAtlas.canvas.getContext("2d"), x = 7 * SPR, y = SPR, px = 6, C = SPR / 2;
     g.clearRect(x, y, SPR, SPR);
-    R(7.5, 11, 3, 2, "#ffd28c"); R(8, 13, 2, 2, "#ff9a3d");                    // thruster
-    R(4, 2, 10, 7, "#d97757"); R(2, 5, 2, 2, "#d97757"); R(14, 5, 2, 2, "#d97757");
-    for (const lx of [5, 7, 10, 12]) R(lx, 9, 1, 2, "#d97757");
-    R(4, 2, 10, 1, "#ec9a7f"); R(4, 8, 10, 1, "#b65a3f");
-    R(6, 4, 1, 2, "#1a0f0c"); R(11, 4, 1, 2, "#1a0f0c");                       // eyes
+    const frame = (fx, fy, legs, flame) => {
+      const ox = x + fx * C + (C - 18 * px) / 2, oy = y + fy * C + (C - 16 * px) / 2;
+      const R = (cx, cy, w, h, c) => { g.fillStyle = c; g.fillRect(ox + cx * px, oy + cy * px, w * px, h * px); };
+      if (flame) { R(7.5, 11, 3, 2, "#ffd28c"); R(8, 13, 2, 2, "#ff9a3d"); }   // thruster
+      R(4, 2, 10, 7, "#d97757"); R(2, 5, 2, 2, "#d97757"); R(14, 5, 2, 2, "#d97757");
+      [5, 7, 10, 12].forEach((lx, k) => R(lx, 9, 1, legs[k], "#d97757"));
+      R(4, 2, 10, 1, "#ec9a7f"); R(4, 8, 10, 1, "#b65a3f");
+      R(6, 4, 1, 2, "#1a0f0c"); R(11, 4, 1, 2, "#1a0f0c");                     // eyes
+    };
+    frame(0, 0, [2, 2, 2, 2], true); frame(1, 0, [2, 1, 2, 1], false); frame(0, 1, [1, 2, 1, 2], false);
     gl.bindTexture(gl.TEXTURE_2D, sprAtlas.tex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, sprAtlas.canvas);
-    return { u0: x / 2048, v0: y / 512, u1: (x + SPR) / 2048, v1: (y + SPR) / 512 };
+    const f = (fx, fy) => ({ u0: (x + fx * C) / 2048, v0: (y + fy * C) / 512, u1: (x + fx * C + C) / 2048, v1: (y + fy * C + C) / 512 });
+    return { ...f(0, 0), walk: [f(1, 0), f(0, 1)] };
   }
   function drawMoteBots() {
     if (!botCell) botCell = robotCell();
@@ -2415,14 +2514,79 @@
     flush(quads);
     gl.blendFunc(gl.ONE, gl.ONE);
   }
+  // ---------- the city's life: little bots walking the streets, and fog lying low between the buildings ----------
+  // Each walker loops the street around one district (the strip between its edge and its buildings);
+  // the fog is a few hundred soft puffs drifting at street level. Both are depth-sorted in among the
+  // buildings, so a bot disappears behind a tower and the haze sits between them, not on top.
+  let walkers = [], puffs = [], cityX = [], cityXi = 0;
+  function seedCity() {
+    walkers = []; puffs = [];
+    const streets = cityRects.filter((r) => r.depth >= 1 && r.x1 - r.x0 > 60 * LS && r.z1 - r.z0 > 60 * LS);
+    for (let k = 0; k < Math.min(16, streets.length * 2); k++) {
+      const r = streets[(Math.random() * streets.length) | 0];
+      walkers.push({ r, s: rand(0, 1e4), v: rand(9, 16) * LS * (Math.random() < 0.5 ? -1 : 1), ph: rand(0, 6.28) });
+    }
+    const half = CITY.side * LS / 2;
+    for (let k = 0; k < 220; k++) puffs.push({ x: rand(-half, half), z: rand(-half, half), y: rand(6, 80) * LS, r: rand(90, 190) * LS, v: rand(3, 9) * LS, a: rand(0.6, 1) });
+  }
+  function streetPos(w, out) {                                                // a point on the district's street loop
+    const r = w.r, m = 2.2 * LS, x0 = r.x0 + m, z0 = r.z0 + m, x1 = r.x1 - m, z1 = r.z1 - m, wd = x1 - x0, ht = z1 - z0, P = 2 * (wd + ht);
+    let s = ((w.s % P) + P) % P;
+    if (s < wd) { out.x = x0 + s; out.z = z0; } else if ((s -= wd) < ht) { out.x = x1; out.z = z0 + s; }
+    else if ((s -= ht) < wd) { out.x = x1 - s; out.z = z1; } else { s -= wd; out.x = x0; out.z = z1 - s; }
+    return out;
+  }
+  const WP = { x: 0, z: 0 }, WQ = { x: 0, z: 0 };
+  function prepCity(dt) {
+    cityX.length = 0; cityXi = 0;
+    const w = modeW.city;
+    if (w < 0.05 || !cityRects.length) return;
+    if (!walkers.length && !puffs.length) seedCity();
+    const rise = sstep(0, 1, w), half = CITY.side * LS / 2, flash = storm.light ? storm.light.i : 0;
+    for (const b of walkers) {
+      b.s += b.v * dt;
+      streetPos(b, WP); WQ.x = WP.x; WQ.z = WP.z; b.s += b.v * 0.05; streetPos(b, WQ); b.s -= b.v * 0.05;
+      const h = 30 * LS, y = cityTop(b.r.y1, rise) + h * 0.45 * spacing + Math.abs(Math.sin(T * 9 + b.ph)) * 0.6 * LS;
+      project(WQ.x * spacing, y, WQ.z * spacing, tmp); const ax = tmp.sx;
+      project(WP.x * spacing, y, WP.z * spacing, tmp);
+      if (!tmp.vis) continue;
+      cityX.push({ bot: true, sx: tmp.sx, sy: tmp.sy, R: h * spacing * tmp.s * 0.75, depth: tmp.depth, flip: ax < tmp.sx, step: (T * 7 + b.ph) % 2 < 1, a: w });
+    }
+    for (const f of puffs) {
+      f.x += f.v * dt; if (f.x > half) f.x = -half;
+      project(f.x * spacing, (CITY.y0 * LS + f.y) * spacing, f.z * spacing, tmp);
+      if (!tmp.vis) continue;
+      const R = f.r * spacing * tmp.s;
+      if (tmp.sx < -R || tmp.sx > W + R || tmp.sy < -R || tmp.sy > H + R) continue;
+      cityX.push({ bot: false, sx: tmp.sx, sy: tmp.sy, R, depth: tmp.depth, a: w * f.a * (0.3 + 0.6 * flash) });
+    }
+    cityX.sort((a, b) => b.depth - a.depth);
+  }
+  function drawCityUntil(depth) {                                            // everything of the city's life farther than `depth`
+    while (cityXi < cityX.length && cityX[cityXi].depth > depth) {
+      const e = cityX[cityXi++];
+      if (e.bot) {
+        if (!botCell) botCell = robotCell();
+        const c = botCell.walk[e.step ? 1 : 0];
+        setColor("#ffffff", e.a);
+        quad(e.sx - e.R, e.sy - e.R, e.sx + e.R, e.sy + e.R, e.flip ? c.u1 : c.u0, c.v0, e.flip ? c.u0 : c.u1, c.v1, 3);
+      } else {
+        setColor("#b4c3ee", e.a);
+        quad(e.sx - e.R, e.sy - e.R * 0.55, e.sx + e.R, e.sy + e.R * 0.55, 0, 0, 1, 1, 10);
+      }
+    }
+  }
   function drawBolts() {   // additive, behind the bubbles: a soft halo and a hair-thin core
     drawMoteBots();        // (the far layer: the motes' robots first)
     for (const b of storm.bolts) {
-      const I = flashI(b.fl) * (1.15 - b.fl.dist) * 0.22;
+      const I = flashI(b.fl) * (b.node ? 1.1 : (1.15 - b.fl.dist) * 0.5);
       if (I < 0.01) continue;
-      for (const p of b.paths) for (const [hw, al, col] of [[5 * p.w + 1, 0.08, "#8f9cff"], [0.9 * p.w + 0.35, 0.8, "#eef0ff"]]) {
+      let ox = 0, oy = 0;                                                     // a strike stays on its bubble as the camera turns
+      if (b.node) { const q = proj[b.node.i]; if (q.vis) { ox = q.sx / W - b.tx; oy = q.sy / H - b.ty; } }
+      const pt = (v) => { const f = b.node ? Math.max(0, Math.min(1, (v[1] + 0.04) / (b.ty + 0.04))) : 0; return [(v[0] + ox * f) * W, (v[1] + oy * f) * H]; };
+      for (const p of b.paths) for (const [hw, al, col] of [[9 * p.w + 2, 0.1, "#7f8fff"], [3 * p.w + 1, 0.3, "#b9c6ff"], [1.1 * p.w + 0.4, 1, "#f6f8ff"]]) {
         setColor(col, Math.min(1, I * al));
-        for (let i = 1; i < p.pts.length; i++) lineSeg(p.pts[i - 1][0] * W, p.pts[i - 1][1] * H, p.pts[i][0] * W, p.pts[i][1] * H, hw);
+        for (let i = 1; i < p.pts.length; i++) { const a = pt(p.pts[i - 1]), c = pt(p.pts[i]); lineSeg(a[0], a[1], c[0], c[1], hw); }
       }
     }
   }
@@ -2617,8 +2781,10 @@
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     texBudget = 2.5;   // ms of code drawing per frame (at least one slot)
     rankCode(order);
+    prepCity(dt);
     for (const n of order) {
       const p = proj[n.i];
+      if (cityX.length) drawCityUntil(p.depth);
       if (p.fn) drawBox(n, p);
       const bub = 1 - sstep(0.15, 0.7, n.mb);
       if (bub < 0.01) { p.R = p.boxR; continue; }
@@ -2638,6 +2804,8 @@
       quad(x - h, y - h, x + h, y + h, c.u0, c.v0, c.u1, c.v1, 3);
       // its own glow: selected / hovered / a neighbour of the selection / the bloom's waves / the music's ripple
       let g = n.bp * 0.6 + (n.wv || 0) * 0.45, rgb = hexRGB(n.color);
+      const zi = zaps.size ? zapI(n) : 0;
+      if (zi > 0.01) { g += zi * 1.8; rgb = ZAP_RGB; }
       if (n === selected) g += 0.55 + 0.1 * Math.sin(T * 3);
       else if (n === hovered) g += 0.3;
       else if (selected && p.ring) { rgb = p.ring === "#4ff3ff" ? CYAN : PINK; g += 0.28 + 0.05 * Math.sin(T * 2 + n.phase); }
@@ -2645,7 +2813,9 @@
       const lh = R * 1.3;
       quad(x - lh, y - lh, x + lh, y + lh, 0, 0, 1, 1, 6);
     }
+    if (cityX.length) drawCityUntil(-Infinity);
     flush(quads);
+    drawZaps();
     drawFrontFog(); mark2("bubbles");
 
     // ---- 2D overlay: selection rings, change flashes and labels ----
@@ -2891,7 +3061,7 @@
   const DEBUG = [
     ["Storm", [
       ["Bring a storm", () => stormNow(0.9)], ["Calm it", () => stormNow(0)],
-      ["Cloud flash", () => flashNow(false)], ["Bolt", () => flashNow(true)],
+      ["Cloud flash", () => flashNow(false)], ["Bolt", () => flashNow(true)], ["Strike", () => lightning(Math.max(0.7, storm.level), "strike")],
       ["Thunder near", () => SFX.thunder({ delay: 0.15, dist: 0.3, power: 1, pan: rand(-0.6, 0.6) })],
       ["Thunder far", () => SFX.thunder({ delay: 0.15, dist: 0.95, power: 0.6, pan: rand(-0.7, 0.7) })],
     ]],

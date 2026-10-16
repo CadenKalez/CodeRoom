@@ -740,6 +740,23 @@
     thunderAt(t + rand(0, 3), { dist: rand(0.88, 1), power: rand(0.4, 0.7) * (0.6 + 0.4 * stormLevel), pan: rand(-0.85, 0.85) });
   }
 
+  // ---------- a strike: the bolt hits a bubble ----------
+  // A white snap and a spray of crackle where it lands, a thump in the floor, then glassy ticks running
+  // off through the room as the charge hops from bubble to bubble, quieter each hop.
+  function zapAt(t, pan = 0, hops = 6) {
+    const src = noise(false, t), hp = ctx.createBiquadFilter(), g = ctx.createGain();
+    hp.type = "highpass"; hp.frequency.value = 2200;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.09, t + 0.003); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+    src.connect(hp).connect(g);
+    const o = out(g, { pan, group: "sfx", dry: 0.6, rev: 0.6, del: 0.15 });
+    src.stop(t + 0.32); src.onended = () => o.disconnect();
+    for (let k = 0; k < 9; k++) chip([ROOT + 55 + ((Math.random() * 14) | 0)], { wave: "noise", hold: 0.004, decay: 0.03 + Math.random() * 0.04 },
+                                      { t: t + Math.random() * 0.45, gain: 0.04 * (1 - k / 12), pan: clamp(pan + rand(-0.3, 0.3), -1, 1), dry: 0.6, rev: 0.4, del: 0.1 });
+    thump(t, 0.12);
+    const steps = Math.min(8, Math.max(3, hops >> 1));
+    for (let k = 0; k < steps; k++) glassTick(chordNote(ROOT + 45, 8) + 12, { t: t + 0.12 + k * 0.11, gain: 0.03 * Math.pow(0.8, k), pan: rand(-0.7, 0.7), rev: 0.5, del: 0.25 });
+  }
+
   // ---------- the robot's voice: a few chip blips (it's a little computer) ----------
   function robotVoice(kind, pan = 0) {
     const t = now() + 0.02;
@@ -1935,6 +1952,8 @@
       if (!added && !removed && !changed) glassTick(ROOT + 36, { t, gain: 0.025, rev: 0.5 });
     },
 
+    // lightning struck a bubble: the snap, the crackle, the charge running off over `hops` bubbles
+    zap({ pan = 0, hops = 6 } = {}) { if (ready()) zapAt(now() + 0.01, pan, hops); },
     // the robot easter egg: "arrive", "hello", "boop" (clicked), "leave"
     robot(kind = "hello", pan = 0) { if (ready()) robotVoice(kind, pan); },
     // the radio: let the current track go now / play a keygen tune now
