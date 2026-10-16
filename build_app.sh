@@ -20,8 +20,12 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 swiftc -O -swift-version 5 -o "$APP/Contents/MacOS/CodeRoom" "$HERE/app/main.swift" -framework Cocoa -framework WebKit
 cp "$HERE/app/Info.plist" "$APP/Contents/Info.plist"
 cp "$HERE/server.py" "$HERE/index.html" "$HERE/sound.js" "$APP/Contents/Resources/"
-cp -R "$HERE/samples" "$APP/Contents/Resources/samples"   # the CC0 sample pack
-cp -R "$HERE/music" "$APP/Contents/Resources/music"       # openly licensed tracker / chiptune music
+# the CC0 sample pack and the openly licensed tracker / chiptune music; without them the room
+# falls back to pure synthesis and the radio stays silent, so a missing folder is a warning, not an error
+for d in samples music; do
+  if [ -d "$HERE/$d" ]; then cp -R "$HERE/$d" "$APP/Contents/Resources/$d"
+  else echo "  ! $d/ not found — building without it"; fi
+done
 
 echo "→ drawing the icon"
 swiftc -O -o "$BUILD/make_icon" "$HERE/app/make_icon.swift" -framework Cocoa
