@@ -1,0 +1,45 @@
+# Code Room for iPhone. Generate the Xcode project with `xcodegen` (brew install xcodegen), or open the
+# CodeRoom.xcodeproj that is checked in next to this file.
+name: CodeRoom
+options:
+  bundleIdPrefix: local.coderoom
+  deploymentTarget:
+    iOS: "15.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    MARKETING_VERSION: "1.1"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.0"
+    TARGETED_DEVICE_FAMILY: "1"            # iPhone (laid out for the iPhone 11)
+    CODE_SIGN_STYLE: Automatic
+    ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    INFOPLIST_KEY_CFBundleDisplayName: Code Room
+targets:
+  CodeRoom:
+    type: application
+    platform: iOS
+    sources:
+      - path: CodeRoom
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: local.coderoom.ios
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIStatusBarStyle: UIStatusBarStyleLightContent
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_UIRequiresFullScreen: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace: YES
+    preBuildScripts: []
+    postCompileScripts:
+      - name: Bundle the room (page, sound, scanner, samples, music)
+        basedOnDependencyAnalysis: false
+        script: |
+          set -e
+          SRC="${PROJECT_DIR}/.."
+          WWW="${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/www"
+          mkdir -p "$WWW"
+          cp "$SRC/index.html" "$SRC/sound.js" "$SRC/scanner.js" "$SRC/server.py" "$WWW/"
+          rsync -a --delete "$SRC/samples/" "$WWW/samples/"
+          rsync -a --delete "$SRC/music/" "$WWW/music/"

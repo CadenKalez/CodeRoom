@@ -840,8 +840,8 @@ class Handler(BaseHTTPRequestHandler):
         if url.path in ("/", "/index.html"):
             with open(os.path.join(HERE, "index.html"), "rb") as f:
                 return self._send(200, f.read(), "text/html; charset=utf-8")
-        if url.path == "/sound.js":
-            with open(os.path.join(HERE, "sound.js"), "rb") as f:
+        if url.path in ("/sound.js", "/scanner.js"):
+            with open(os.path.join(HERE, url.path[1:]), "rb") as f:
                 return self._send(200, f.read(), "text/javascript; charset=utf-8")
         remote = re.fullmatch(r"/music/remote/(\d{1,7})", url.path)
         if remote:

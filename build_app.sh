@@ -19,7 +19,7 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
 swiftc -O -swift-version 5 -o "$APP/Contents/MacOS/CodeRoom" "$HERE/app/main.swift" -framework Cocoa -framework WebKit
 cp "$HERE/app/Info.plist" "$APP/Contents/Info.plist"
-cp "$HERE/server.py" "$HERE/index.html" "$HERE/sound.js" "$APP/Contents/Resources/"
+cp "$HERE/server.py" "$HERE/index.html" "$HERE/sound.js" "$HERE/scanner.js" "$APP/Contents/Resources/"
 cp -R "$HERE/samples" "$APP/Contents/Resources/samples"   # the CC0 sample pack
 cp -R "$HERE/music" "$APP/Contents/Resources/music"       # openly licensed tracker / chiptune music
 

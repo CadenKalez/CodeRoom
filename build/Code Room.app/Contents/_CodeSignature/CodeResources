@@ -10,7 +10,7 @@
 		</data>
 		<key>Resources/index.html</key>
 		<data>
-		LPz/PlBP6KxWsFBhZEuhF1T5z6k=
+		xUWchF1ytUJh8DqPLUVAy8aKLeI=
 		</data>
 		<key>Resources/music/CREDITS.md</key>
 		<data>
@@ -696,13 +696,17 @@
 		<data>
 		LkZwIhfr+T7ouqArbO8x67v+PB0=
 		</data>
+		<key>Resources/scanner.js</key>
+		<data>
+		32Bv0tzw2OIgs7NN917e+K65seM=
+		</data>
 		<key>Resources/server.py</key>
 		<data>
-		1nhGDGW9f3uSkEshTCfj6o05Pyc=
+		TbzE8Xmwa1rdFWLy/7PME4oPoJw=
 		</data>
 		<key>Resources/sound.js</key>
 		<data>
-		TqHiXk2R8fNbPwZpPS1hVSG/tf8=
+		6/0mRlB3UbgdQspMTOjCLLEj2VM=
 		</data>
 	</dict>
 	<key>files2</key>
@@ -718,7 +722,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			ERhcfBHNs2H9mduA7dNCiF8LcKuips0za/Xs52QjBAg=
+			K0xCl5WnLUFA+DbI1nj6N7jrAxqCmOYzm8FqdSYpK9U=
 			</data>
 		</dict>
 		<key>Resources/music/CREDITS.md</key>
@@ -1911,18 +1915,25 @@
 			6br6EL7B/sLVlyY1KzFsmz2IxdhgWBaTx0zzPeHC8r4=
 			</data>
 		</dict>
+		<key>Resources/scanner.js</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			5xZtzS10BfjVjZuWSD/r5zXkxLlcPQlSKmRbTZIEnsM=
+			</data>
+		</dict>
 		<key>Resources/server.py</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			RkeLp/bYhZRByXUtx1MQgZEvYXdsmSkSH+PKtl4j+i4=
+			FzhZoAPMBxGBlQlrYkKUhLkE3SXJBIrbEy58RWb1rC0=
 			</data>
 		</dict>
 		<key>Resources/sound.js</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			IQTKvrSxNfcB7/gXzt0zW48MEG6xLDmfXTasUxBjDAE=
+			VZJhzK3YC1iN69a3LnYcelaxldlqG+6acdN/GhBP3mE=
 			</data>
 		</dict>
 	</dict>

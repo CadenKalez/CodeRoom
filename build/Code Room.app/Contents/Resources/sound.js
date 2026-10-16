@@ -1544,6 +1544,17 @@
     } else if (prefill) {
       const buf = await fetch(musicBase() + entry.file).then((r) => r.arrayBuffer()).then((a) => new Promise((ok, no) => ctx.decodeAudioData(a, ok, no)));
       const src = ctx.createBufferSource(); src.buffer = buf; src.connect(room.input); src.start(t0, Math.min(30, buf.duration / 4)); src.stop(t0 + seconds);
+    } else if (window.CODEROOM_IOS) {
+      // on the iPhone the files come through the app's own URL scheme, which a media element can't stream
+      // from: the track is decoded whole and played from a random place in the middle
+      const buf = await fetch(musicBase() + entry.file).then((r) => r.arrayBuffer()).then((a) => new Promise((ok, no) => ctx.decodeAudioData(a, ok, no)));
+      if (radio.playing !== job) return job;
+      const src = ctx.createBufferSource(); src.buffer = buf; src.connect(room.input);
+      const at = Math.max(t0, now() + 0.1);
+      src.start(at, rand(0, Math.max(0, buf.duration - seconds - 5))); src.stop(at + seconds);
+      job.src = src;
+      const tick = () => { if (radio.playing !== job) return; if (!testing && now() > job.end) { radioEnd(); return; } radio.timer = setTimeout(tick, 500); };
+      tick();
     } else {
       const el = new Audio(musicBase() + entry.file); el.preload = "auto"; job.el = el;
       const node = ctx.createMediaElementSource(el); node.connect(room.input);
@@ -1565,6 +1576,7 @@
       const until = fade ? job.room.fadeNow(fade) : now();
       if (job.player) job.player.stop(until);
       if (job.el) setTimeout(() => { job.el.pause(); job.el.removeAttribute("src"); job.el.load(); }, (until - now() + 0.5) * 1000);
+      if (job.src) { try { job.src.stop(until + 0.1); } catch (_) {} }
       job.room.close(until + 1);
     }
     radio.notes.length = 0;

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Code Room</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Orbitron:wght@600;800&family=Chakra+Petch:wght@600;700&display=swap" rel="stylesheet">
@@ -320,6 +320,63 @@
     .hint { display: none; }
     aside.open ~ .legend { display: none; }
   }
+  /* phones (designed on the iPhone 11, 414 × 896): a compact top bar, the controls behind ⋯, everything
+     else along the bottom where the thumb is, clear of the notch and the home indicator */
+  .pbtn { display: none; }
+  .suggest { display: flex; flex-wrap: wrap; gap: 6px; }
+  .suggest .ghost { padding: 6px 10px; font-size: 11px; }
+  @media (max-width: 520px) {
+    html, body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+    input { -webkit-user-select: text; user-select: text; font-size: 16px !important; }          /* 16 px: iOS won't zoom on focus */
+    header { padding: calc(env(safe-area-inset-top) + 8px) 12px 10px; gap: 8px; align-items: center; transition: background 0.3s; }
+    header h1 { font-size: 13px; letter-spacing: 0.14em; }
+    header .repo-wrap { flex: 1; min-width: 0; }
+    header .repo { max-width: 100%; box-sizing: border-box; font-size: 13px; padding: 7px 10px; }
+    .pbtn {
+      all: unset; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; flex: none; cursor: pointer;
+      color: var(--ink); background: var(--glass); border: 1px solid var(--glass-edge);
+    }
+    .pbtn svg { width: 18px; height: 18px; }
+    .pbtn[aria-expanded="true"], header.searching #pSearch { color: var(--bg0); background: var(--dep); border-color: var(--dep); }
+    .pop { position: fixed; top: calc(env(safe-area-inset-top) + 58px); left: 12px; right: 12px; width: auto; max-height: 70vh; overflow: auto; }
+    header > .stats { display: none; }
+    header .search { display: none; order: 5; width: 100%; margin: 0; }
+    header.searching .search { display: block; }
+    .results { max-height: 40vh; }
+    header .toolbar, header .sliders { display: none; }
+    header.more { background: var(--glass-solid); border-bottom: 1px solid var(--glass-edge); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45); }
+    header.more .toolbar { display: flex; order: 6; width: 100%; justify-content: center; gap: 8px; }
+    header.more .sliders { display: flex; order: 7; width: 100%; flex-wrap: wrap; justify-content: space-between; gap: 10px 12px; border-radius: 14px; padding: 10px 14px; }
+    header.more .sliders label { width: 100%; justify-content: space-between; }
+    header.more .sliders input[type="range"] { flex: 1; width: auto; }
+    header .tbtn { padding: 9px 14px; font-size: 12px; }
+    .legend {
+      left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 74px); max-width: none; max-height: none;
+      flex-wrap: nowrap; overflow-x: auto; padding: 0 12px; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    }
+    .legend::-webkit-scrollbar { display: none; }
+    .legend .chip { flex: none; padding: 7px 11px; }
+    .corner { left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom) + 10px); justify-content: center; }
+    .views button { padding: 7px 16px 6px; }
+    .bugbtn { width: 40px; height: 40px; }
+    .dbg { right: auto; left: 0; width: min(340px, calc(100vw - 24px)); max-height: 62vh; overflow: auto; }
+    .dbg .row button { padding: 8px 11px; font-size: 12px; }
+    aside {
+      top: auto; left: 0; right: 0; bottom: 0; width: auto; max-width: none; height: 64vh; border-radius: 20px 20px 0 0;
+      padding-bottom: env(safe-area-inset-bottom); transform: translateY(105%); background: var(--glass-solid);
+    }
+    aside.open { transform: none; }
+    aside .head { padding-top: 22px; }
+    aside .head::before { content: ""; position: absolute; top: 8px; left: 50%; width: 38px; height: 4px; margin-left: -19px; border-radius: 2px; background: var(--glass-edge); }
+    aside .close { top: 14px; font-size: 22px; }
+    aside.open ~ .legend, aside.open ~ .corner { display: none; }
+    .hint, #tip { display: none !important; }
+    #np { bottom: calc(env(safe-area-inset-bottom) + 116px); max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis; }
+    .welcome { padding: calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px); }
+    .welcome .card { padding: 22px 16px; }
+    .welcome h2 { font-size: 24px; }
+    .recent { max-height: 34vh; }
+  }
 </style>
 </head>
 <body>
@@ -335,6 +392,8 @@
     <button class="repo" id="repoBtn" title="Open another repository (O)"><span class="rdot"></span><span id="repoName">Open repository</span><span class="caret">▾</span></button>
     <div class="pop" id="repoMenu" hidden></div>
   </div>
+  <button class="pbtn" id="pSearch" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5 5"/></svg></button>
+  <button class="pbtn" id="pMore" aria-label="More controls" aria-expanded="false"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
   <span class="stats" id="stats"></span>
   <div class="search">
     <input id="q" type="search" placeholder="Search module, class or function…" autocomplete="off" spellcheck="false">
@@ -443,6 +502,7 @@
 </div>
 
 <script src="sound.js"></script>
+<script src="scanner.js"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -451,6 +511,10 @@
   // inside Code Room.app the page can ask the Mac side for a folder picker, Finder, editors
   const native = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.codeRoom;
   const tell = (msg) => { try { native.postMessage(msg); } catch (_) {} };
+  // the iPhone app (or ?ios in a browser): no server, the page scans repositories itself
+  const IOS = !!window.CODEROOM_IOS, STANDALONE = IOS || new URLSearchParams(location.search).has("ios");
+  if (STANDALONE) document.documentElement.classList.add("standalone");
+  if (IOS) document.documentElement.classList.add("ios");
   // procedural sound (sound.js); a silent stand-in keeps the page working without it
   const SFX = window.CodeRoomSound || new Proxy({}, { get: () => () => {} });
 
@@ -1617,6 +1681,112 @@
     clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 6000);
   }
 
+  // ---------- repositories without a server: the iPhone app (and ?ios in a browser, to try it) ----------
+  // There's no Python on an iPhone, so the page scans by itself (scanner.js, the same rules as server.py):
+  // a folder picked in Files (the app reads it and serves the files as local/<id>.json), a public GitHub
+  // repository (fetched straight from GitHub), or Code Room's own code, bundled for trying it offline.
+  // Recent repositories live in this device's storage.
+  const ghCache = new Map();                                                   // root → path → { sha, text }
+  function loadRecentLocal() { try { return JSON.parse(localStorage.getItem("coderoom.recent") || "[]"); } catch (_) { return []; } }
+  function rememberLocal(root, g) {
+    const list = loadRecentLocal().filter((r) => r.path !== root);
+    list.unshift({ path: root, name: g.name, modules: g.nodes.length, languages: Object.keys(g.languages).slice(0, 3), opened: Date.now() / 1000 });
+    try { localStorage.setItem("coderoom.recent", JSON.stringify(list.slice(0, 12))); } catch (_) {}
+  }
+  const ghSpec = (root) => root.slice(7).trim().replace(/^https?:\/\/(www\.)?github\.com\//, "").replace(/\.git$/, "").replace(/\/+$/, "");
+  function rootLabel(root) {
+    if (root.startsWith("github:")) return ghSpec(root).split("@")[0].split("/")[1] || ghSpec(root);
+    if (root.startsWith("files:")) return root.slice(6).split("|")[1] || "folder";
+    return root === "demo:" ? "Code Room" : baseName(root);
+  }
+  function rootWhere(root) {
+    if (root.startsWith("github:")) return "github.com/" + ghSpec(root);
+    if (root.startsWith("files:")) return "Files › " + rootLabel(root);
+    return root === "demo:" ? "Code Room's own source, built in" : root;
+  }
+  function loading(text) { if (!$("welcome").hidden) $("wSub").textContent = text; }
+  async function githubFiles(root) {
+    let [repo, ref] = ghSpec(root).split("@");
+    const [owner, name] = repo.split("/");
+    if (!owner || !name) throw new Error("Type a GitHub repository as owner/name, like expressjs/express.");
+    const api = async (path) => {
+      const r = await fetch(`https://api.github.com/repos/${owner}/${name}${path}`, { headers: { Accept: "application/vnd.github+json" } });
+      if (r.status === 403 || r.status === 429) throw new Error("GitHub's hourly limit for this network is used up. Try again in a little while.");
+      if (r.status === 404) throw new Error(`There's no public repository ${owner}/${name} on GitHub.`);
+      if (!r.ok) throw new Error(`GitHub answered ${r.status}.`);
+      return r.json();
+    };
+    if (!ref) ref = (await api("")).default_branch;
+    loading(`Listing ${owner}/${name}…`);
+    const tree = await api(`/git/trees/${encodeURIComponent(ref)}?recursive=1`);
+    const items = tree.tree.filter((t) => t.type === "blob" && t.size <= CodeRoomScanner.MAX_FILE_BYTES && CodeRoomScanner.wanted(t.path)).slice(0, 2500);
+    const cache = ghCache.get(root) || new Map(); ghCache.set(root, cache);
+    const out = [], queue = items.slice();
+    let done = 0;
+    const worker = async () => {
+      while (queue.length) {
+        const t = queue.shift();
+        let c = cache.get(t.path);
+        if (!c || c.sha !== t.sha) {                                           // an update only fetches what changed
+          const r = await fetch(`https://raw.githubusercontent.com/${owner}/${name}/${encodeURIComponent(ref)}/${t.path.split("/").map(encodeURIComponent).join("/")}`);
+          c = { sha: t.sha, text: r.ok ? await r.text() : null }; cache.set(t.path, c);
+        }
+        out.push({ path: t.path, text: c.text });
+        if (++done % 20 === 0) loading(`Reading ${owner}/${name}… ${done} of ${items.length} files`);
+      }
+    };
+    await Promise.all(Array.from({ length: 12 }, worker));
+    return { name, files: out, walked: false, truncated: tree.truncated || items.length === 2500 };
+  }
+  async function standaloneGraph(root) {
+    let src;
+    if (root.startsWith("github:")) src = await githubFiles(root);
+    else if (root.startsWith("files:")) {
+      const [id, name] = root.slice(6).split("|");
+      const r = await fetch(`local/${encodeURIComponent(id)}.json`, { cache: "no-store" });
+      if (!r.ok) throw new Error("That folder can't be read any more. Choose it again from Files.");
+      const d = await r.json();
+      src = { name: d.name || name, files: d.files, walked: true };
+    } else if (root === "demo:") {
+      const paths = ["sound.js", "scanner.js", "server.py"];
+      src = { name: "Code Room", walked: true, files: await Promise.all(paths.map(async (p) => ({ path: p, text: await (await fetch(p)).text() }))) };
+    } else throw new Error("Choose a folder from Files, or type a GitHub repository like owner/name.");
+    loading(`Scanning ${src.files.length} files…`);
+    await new Promise((r) => setTimeout(r, 30));
+    const g = CodeRoomScanner.scan({ root, name: src.name, files: src.files, walked: src.walked });
+    if (src.truncated) g.truncated = true;
+    rememberLocal(root, g);
+    return g;
+  }
+  const SUGGESTED = ["expressjs/express", "pallets/flask", "BurntSushi/ripgrep", "gin-gonic/gin", "square/okhttp"];
+  function renderPhoneChoices(el) {
+    if (native) {
+      const files = document.createElement("button");
+      files.className = "primary"; files.textContent = "Choose a folder in Files…";
+      files.onclick = pickFolder;
+      el.appendChild(files);
+    }
+    const form = document.createElement("form"); form.className = "pathform";
+    form.innerHTML = `<input type="text" inputmode="url" placeholder="GitHub repo, e.g. expressjs/express" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off"><button class="ghost" type="submit">Open</button>`;
+    form.onsubmit = (e) => { e.preventDefault(); const v = form.querySelector("input").value.trim(); if (v) openRepo("github:" + v); };
+    el.appendChild(form);
+    const try_ = document.createElement("div"); try_.className = "suggest";
+    try_.innerHTML = SUGGESTED.map((r) => `<button class="ghost" data-r="${esc(r)}">${esc(r.split("/")[1])}</button>`).join("") + `<button class="ghost" data-r="demo:">Code Room itself</button>`;
+    try_.onclick = (e) => { const b = e.target.closest("button[data-r]"); if (b) openRepo(b.dataset.r === "demo:" ? "demo:" : "github:" + b.dataset.r); };
+    el.appendChild(try_);
+    if (recent.length) {
+      const h = document.createElement("h4"); h.textContent = "Recent"; el.appendChild(h);
+      const list = document.createElement("div"); list.className = "recent";
+      for (const r of recent.slice(0, 8)) {
+        const b = document.createElement("button");
+        b.innerHTML = `<b>${esc(r.name)}</b><small>${esc(rootWhere(r.path))}</small><span>${r.modules != null ? r.modules + " modules" : ""}<br>${esc((r.languages || []).slice(0, 2).join(", "))}</span>`;
+        b.onclick = () => openRepo(r.path);
+        list.appendChild(b);
+      }
+      el.appendChild(list);
+    }
+  }
+
   // ---------- repositories ----------
   let scanningRoot = null;
   async function rescan() {
@@ -1626,20 +1796,24 @@
     const btn = $("tUpdate"); btn.classList.add("busy");
     if (nodes.length) SFX.rescanStart();
     try {
-      const r = await fetch("api/graph?root=" + encodeURIComponent(root), { cache: "no-store" });
-      const data = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(data.error || `${r.status} ${r.statusText}`);
+      let data;
+      if (STANDALONE) data = await standaloneGraph(root);
+      else {
+        const r = await fetch("api/graph?root=" + encodeURIComponent(root), { cache: "no-store" });
+        data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data.error || `${r.status} ${r.statusText}`);
+      }
       if (root !== currentRoot) return; // another repository was opened meanwhile
       currentRoot = data.root; repoName = data.name;
       $("repoName").textContent = repoName; $("repoBtn").title = data.root;
       document.title = `${repoName} — Code Room`;
-      try { history.replaceState(null, "", "?root=" + encodeURIComponent(data.root)); } catch (_) {}
+      try { history.replaceState(null, "", "?root=" + encodeURIComponent(data.root) + (STANDALONE && !IOS ? "&ios" : "")); } catch (_) {}
       hideWelcome();
       applyGraph(data);
       refreshRecent();
     } catch (err) {
       const msg = String(err.message || err);
-      if (root === currentRoot && !nodes.length) showWelcome("error", msg.includes("fetch") ? "Can't reach the Code Room engine — is server.py running?" : msg);
+      if (root === currentRoot && !nodes.length) showWelcome("error", !STANDALONE && msg.includes("fetch") ? "Can't reach the Code Room engine — is server.py running?" : STANDALONE && /load failed|failed to fetch|network/i.test(msg) ? "Couldn't reach GitHub. Check the connection and try again." : msg);
       else toast(`<b style="color:#ff5f6d">Scan failed</b> <small>${esc(msg)}</small>`);
       SFX.error();
     } finally {
@@ -1659,6 +1833,10 @@
   }
 
   async function refreshRecent() {
+    if (STANDALONE) {
+      recent = loadRecentLocal(); supported = CodeRoomScanner.languages;
+      return { recent, default: recent.length ? recent[0].path : null };
+    }
     try {
       const info = await (await fetch("api/recent", { cache: "no-store" })).json();
       recent = info.recent || []; home = info.home || home; supported = info.languages || supported;
@@ -1668,6 +1846,7 @@
 
   function pickFolder() {
     if (native) tell({ type: "pickFolder" });
+    else if (STANDALONE) return;
     else openBrowser(currentRoot ? currentRoot.replace(/\/[^/]+\/?$/, "") || "/" : home);
   }
 
@@ -1675,6 +1854,7 @@
     container.innerHTML = "";
     const el = document.createElement("div"); el.className = "choices";
     container.appendChild(el);
+    if (STANDALONE) { renderPhoneChoices(el); return; }
     const browse = document.createElement("button");
     browse.className = "primary"; browse.textContent = native ? "Choose a folder…" : "Browse folders…";
     browse.onclick = pickFolder;
@@ -1694,7 +1874,7 @@
       }
       el.appendChild(list);
     }
-    if (native && currentRoot) {
+    if (native && !IOS && currentRoot) {
       const reveal = document.createElement("button"); reveal.className = "ghost"; reveal.textContent = "Show current repository in Finder";
       reveal.onclick = () => tell({ type: "reveal", path: currentRoot });
       el.appendChild(reveal);
@@ -1706,8 +1886,8 @@
     const body = $("wBody"), sub = $("wSub");
     body.className = ""; body.innerHTML = "";
     if (state === "loading") {
-      sub.textContent = `Scanning ${baseName(info)}…`;
-      body.innerHTML = `<div class="spinner"></div><div class="path">${esc(tildify(info))}</div>`;
+      sub.textContent = `Scanning ${STANDALONE ? rootLabel(info) : baseName(info)}…`;
+      body.innerHTML = `<div class="spinner"></div><div class="path">${esc(STANDALONE ? rootWhere(info) : tildify(info))}</div>`;
       return;
     }
     if (state === "error") {
@@ -1718,7 +1898,7 @@
     }
     const box = document.createElement("div"); renderChoices(box); body.appendChild(box);
     const langs = document.createElement("div"); langs.className = "langs";
-    langs.textContent = (supported.length ? "Reads " + supported.join(" · ") : "") + (native ? "  —  or drop a folder onto this window." : "");
+    langs.textContent = (supported.length ? "Reads " + supported.join(" · ") : "") + (native && !IOS ? "  —  or drop a folder onto this window." : "");
     body.appendChild(langs);
   }
   function hideWelcome() { $("welcome").hidden = true; }
@@ -2721,6 +2901,11 @@
     // camera easing
     if (++fitTick % 20 === 0) updateFit();
     if (!userZoomed && !selected) goal.dist = fitDist;
+    if (selected && W <= 520 && $("panel").classList.contains("open")) {
+      // on a phone the sheet covers the lower part of the screen: keep the selection in the part above it
+      const P = posIn(selected, mode), lift = (H * 0.27) * goal.dist / F;   // px above centre → world units at its depth
+      goal.tx = P.x * spacing + sp * sy * lift; goal.ty = P.y * spacing - cp * lift; goal.tz = P.z * spacing + sp * cy * lift;
+    }
     if (!selected) {                                   // glide after the crowd, softly
       const k = 1 - Math.pow(0.35, dt);
       goal.tx += (focus.x - goal.tx) * k; goal.ty += (focus.y - goal.ty) * k; goal.tz += (focus.z - goal.tz) * k;
@@ -2997,7 +3182,7 @@
     if (!keepCamera) { aimAt(n); goal.dist = Math.min(goal.dist, 420 + n.r * sizeScale * 4); }
     $("pName").textContent = n.name;
     $("pGroup").innerHTML = `<span style="color:${n.color}">●</span> ${esc(n.group)} <span style="color:var(--ink-dim)">· ${esc(n.lang || "")}</span>`;
-    const fileHtml = n.files.map((f) => native ? `<a href="#" data-file="${esc(f)}" title="Open in your editor">${esc(f)}</a>` : esc(f)).join(" + ");
+    const fileHtml = n.files.map((f) => native && !IOS ? `<a href="#" data-file="${esc(f)}" title="Open in your editor">${esc(f)}</a>` : esc(f)).join(" + ");
     $("pMeta").innerHTML = `${fileHtml} · ${n.loc.toLocaleString()} lines · ${n.funcs} functions`;
     $("pDepN").textContent = n.out.length; $("pUseN").textContent = n.inc.length;
     const outRefs = new Map(n.outL.map((l) => [l.t, l.refs])), incRefs = new Map(n.incL.map((l) => [l.s, l.refs]));
@@ -3034,6 +3219,23 @@
   toggle($("tLabels"), (v) => (allLabels = v));
   toggle($("tPhys"), (v) => (physics = v));
   toggle($("tSpin"), (v) => (spin = v));
+
+  // phones: search and the rest of the controls open from the top bar
+  $("pSearch").onclick = () => {
+    const h = document.querySelector("header"), on = !h.classList.contains("searching");
+    h.classList.toggle("searching", on); h.classList.remove("more"); $("pMore").setAttribute("aria-expanded", false);
+    if (on) q.focus(); else { q.blur(); q.value = ""; q.dispatchEvent(new Event("input")); }
+    SFX.ui(on);
+  };
+  $("pMore").onclick = () => {
+    const h = document.querySelector("header"), on = !h.classList.contains("more");
+    h.classList.toggle("more", on); h.classList.remove("searching"); $("pMore").setAttribute("aria-expanded", on);
+    SFX.ui(on);
+  };
+  canvas.addEventListener("pointerdown", () => {
+    const h = document.querySelector("header");
+    if (h.classList.contains("more")) { h.classList.remove("more"); $("pMore").setAttribute("aria-expanded", false); }
+  });
 
   // ---------- views (remembered per browser) ----------
   for (const b of document.querySelectorAll("#views button")) b.onclick = () => { if (b.dataset.mode !== mode) setMode(b.dataset.mode); };

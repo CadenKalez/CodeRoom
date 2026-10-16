@@ -42,6 +42,13 @@ Code Room only **reads** the folders you open. The single file it writes is the 
 The radio downloads a few scene classics (keygen and cracktro tunes that may not be bundled) from
 The Mod Archive the first time it picks them, into `~/Library/Caches/Code Room/modules/`.
 
+## iPhone
+
+`ios/` is the iPhone app, laid out for the iPhone 11. It opens folders from the Files app or public
+GitHub repositories, scanning them on the phone with `scanner.js` (a JavaScript port of the scanner).
+Open `ios/CodeRoom.xcodeproj` in Xcode and run it; see `ios/README.md`. To try the phone layout in any
+browser, open the page with `?ios` and a narrow window.
+
 ## Languages
 
 C / C++ / Objective-C, JavaScript / TypeScript, Python, Go, Rust, Java / Kotlin / Scala, C#, Swift,
@@ -69,6 +76,8 @@ is respected), otherwise from a walk that skips `node_modules`, `build`, `vendor
 
 - `server.py`: scanner + local web server (Python 3.9+, standard library only)
 - `index.html`: the room (WebGL renderer, layout, strands physics, UI)
+- `scanner.js`: the scanner in JavaScript (the same graph as `server.py`), for the iPhone
+- `ios/`: the iPhone app (SwiftUI + WKWebView)
 - `sound.js`: the sound: recorded instruments and places (`samples/`), played and processed live with
   Web Audio, plus ProTracker (.mod) and FastTracker 2 (.xm) players for the radio (`music/`)
 - `app/`: the Mac app shell (`main.swift`), its `Info.plist` and the icon generator
