@@ -1,0 +1,396 @@
+{
+ "oneshots": {
+  "piano": [
+   {
+    "file": "piano_0.m4a",
+    "src": "vcsl__JHPiano_Sus_Close_D3_vl2_rr1.wav",
+    "root": 50.0,
+    "named": 50
+   },
+   {
+    "file": "piano_1.m4a",
+    "src": "vcsl__JHPiano_Sus_Close_F#3_vl2_rr1.wav",
+    "root": 53.98,
+    "named": 54
+   },
+   {
+    "file": "piano_2.m4a",
+    "src": "vcsl__JHPiano_Sus_Close_D4_vl2_rr1.wav",
+    "root": 61.96,
+    "named": 62
+   },
+   {
+    "file": "piano_3.m4a",
+    "src": "vcsl__JHPiano_Sus_Close_F#4_vl2_rr1.wav",
+    "root": 66.0,
+    "named": 66
+   },
+   {
+    "file": "piano_4.m4a",
+    "src": "vcsl__JHPiano_Sus_Close_D5_vl2_rr1.wav",
+    "root": 74.01,
+    "named": 74
+   }
+  ],
+  "harp": [
+   {
+    "file": "harp_0.m4a",
+    "src": "vcsl__KSHarp_D2_mf1.wav",
+    "root": 37.93,
+    "named": 38
+   },
+   {
+    "file": "harp_1.m4a",
+    "src": "vcsl__KSHarp_A2_mf1.wav",
+    "root": 44.95,
+    "named": 45
+   },
+   {
+    "file": "harp_2.m4a",
+    "src": "vcsl__KSHarp_D4_mf1.wav",
+    "root": 61.87,
+    "named": 62
+   },
+   {
+    "file": "harp_3.m4a",
+    "src": "vcsl__KSHarp_F4_mf1.wav",
+    "root": 64.99,
+    "named": 65
+   },
+   {
+    "file": "harp_4.m4a",
+    "src": "vcsl__KSHarp_A4_mf1.wav",
+    "root": 68.91,
+    "named": 69
+   },
+   {
+    "file": "harp_5.m4a",
+    "src": "vcsl__KSHarp_C5_mf1.wav",
+    "root": 71.9,
+    "named": 72
+   },
+   {
+    "file": "harp_6.m4a",
+    "src": "vcsl__KSHarp_E5_mf1.wav",
+    "root": 75.89,
+    "named": 76
+   },
+   {
+    "file": "harp_7.m4a",
+    "src": "vcsl__KSHarp_G5_mf1.wav",
+    "root": 78.94,
+    "named": 79
+   },
+   {
+    "file": "harp_8.m4a",
+    "src": "vcsl__KSHarp_D6_mf1.wav",
+    "root": 85.92,
+    "named": 86
+   }
+  ],
+  "kalimba": [
+   {
+    "file": "kalimba_0.m4a",
+    "src": "vcsl__Mbira6_Normal_MainSpirit_F#3_k10_vl3_rr2.wav",
+    "root": 66.06,
+    "named": 54
+   },
+   {
+    "file": "kalimba_1.m4a",
+    "src": "vcsl__Mbira6_Normal_MainSpirit_B3_k12_vl3_rr2.wav",
+    "root": 71.19,
+    "named": 59
+   },
+   {
+    "file": "kalimba_2.m4a",
+    "src": "vcsl__Mbira6_Normal_MainSpirit_C#4_k2_vl3_rr2.wav",
+    "root": 73.2,
+    "named": 61
+   },
+   {
+    "file": "kalimba_3.m4a",
+    "src": "vcsl__Mbira6_Normal_MainSpirit_F#4_k14_vl3_rr2.wav",
+    "root": 78.35,
+    "named": 66
+   },
+   {
+    "file": "kalimba_4.m4a",
+    "src": "vcsl__Mbira6_Normal_MainSpirit_A4_k1_vl3_rr2.wav",
+    "root": 80.63,
+    "named": 69
+   },
+   {
+    "file": "kalimba_5.m4a",
+    "src": "vcsl__Mbira6_Normal_MainSpirit_B4_k15_vl3_rr2.wav",
+    "root": 83.52,
+    "named": 71
+   }
+  ],
+  "glock": [
+   {
+    "file": "glock_0.m4a",
+    "src": "vcsl__glock_soft_G4_01.wav",
+    "root": 79.08,
+    "named": 67
+   },
+   {
+    "file": "glock_1.m4a",
+    "src": "vcsl__glock_soft_C5_02.wav",
+    "root": 84.12,
+    "named": 72
+   },
+   {
+    "file": "glock_2.m4a",
+    "src": "vcsl__glock_soft_G5_01.wav",
+    "root": 91.12,
+    "named": 79
+   },
+   {
+    "file": "glock_3.m4a",
+    "src": "vcsl__glock_soft_C6_01.wav",
+    "root": 96.15,
+    "named": 84
+   },
+   {
+    "file": "glock_4.m4a",
+    "src": "vcsl__glock_soft_G6_01.wav",
+    "root": 103.16,
+    "named": 91
+   },
+   {
+    "file": "glock_5.m4a",
+    "src": "vcsl__glock_soft_C7_03.wav",
+    "root": 108.24,
+    "named": 96
+   }
+  ],
+  "chime": [
+   {
+    "file": "chime_0.m4a",
+    "src": "vcsl__sus_D4_r01_main.wav",
+    "root": 74.0,
+    "named": 62
+   },
+   {
+    "file": "chime_1.m4a",
+    "src": "vcsl__sus_F#4_r01_main.wav",
+    "root": 78.05,
+    "named": 66
+   },
+   {
+    "file": "chime_2.m4a",
+    "src": "vcsl__sus_A4_r01_main.wav",
+    "root": 81.01,
+    "named": 69
+   },
+   {
+    "file": "chime_3.m4a",
+    "src": "vcsl__sus_D5_r01_main.wav",
+    "root": 85.98,
+    "named": 74
+   },
+   {
+    "file": "chime_4.m4a",
+    "src": "vcsl__sus_E5_r01_main.wav",
+    "root": 88.04,
+    "named": 76
+   },
+   {
+    "file": "chime_5.m4a",
+    "src": "vcsl__sus_F#5_r01_main.wav",
+    "root": 90.02,
+    "named": 78
+   }
+  ],
+  "nbell": [
+   {
+    "file": "nbell_0.m4a",
+    "src": "vcsl__HB_1.wav"
+   },
+   {
+    "file": "nbell_1.m4a",
+    "src": "vcsl__HB_2.wav"
+   },
+   {
+    "file": "nbell_2.m4a",
+    "src": "vcsl__HB_3.wav"
+   }
+  ],
+  "belltree": [
+   {
+    "file": "belltree_0.m4a",
+    "src": "vcsl__BellTree_Stroke_1_Mid.wav"
+   },
+   {
+    "file": "belltree_1.m4a",
+    "src": "vcsl__BellTree_Stroke_6_Mid.wav"
+   }
+  ],
+  "gong": [
+   {
+    "file": "gong_0.m4a",
+    "src": "vcsl__hit_full1.mp3"
+   },
+   {
+    "file": "gong_1.m4a",
+    "src": "vcsl__hit_light1.mp3"
+   },
+   {
+    "file": "gong_2.m4a",
+    "src": "vcsl__hit_light2.mp3"
+   },
+   {
+    "file": "gong_3.m4a",
+    "src": "vcsl__hit_light3.mp3"
+   },
+   {
+    "file": "gong_4.m4a",
+    "src": "vcsl__scrape1.mp3"
+   }
+  ],
+  "timpani": [
+   {
+    "file": "timpani_0.m4a",
+    "src": "vcsl__Timpani2_Roll_v3_rr1_Sum.wav"
+   }
+  ],
+  "cymbal": [
+   {
+    "file": "cymbal_0.m4a",
+    "src": "vcsl__susCymb1_cresc_4s.wav"
+   },
+   {
+    "file": "cymbal_1.m4a",
+    "src": "vcsl__susCymb1_bow_17.wav"
+   }
+  ],
+  "windchime": [
+   {
+    "file": "windchime_0.m4a",
+    "src": "vcsl__windchimes_slowAsc1.wav"
+   },
+   {
+    "file": "windchime_1.m4a",
+    "src": "vcsl__windchimes_slowDesc1.wav"
+   }
+  ],
+  "oceandrum": [
+   {
+    "file": "oceandrum_0.m4a",
+    "src": "vcsl__OceanDrum_Sus_2_Mid.wav"
+   },
+   {
+    "file": "oceandrum_1.m4a",
+    "src": "vcsl__OceanDrum_Sus_3_Mid.wav"
+   }
+  ]
+ },
+ "loops": {
+  "glass": [
+   {
+    "file": "glass_0.flac",
+    "root": 75.32,
+    "src": "vcsl__glass1_D#4_Slow_1_Main.wav",
+    "named": 63
+   },
+   {
+    "file": "glass_1.flac",
+    "root": 77.88,
+    "src": "vcsl__glass2_F#4_Slow_1_Main.wav",
+    "named": 66
+   },
+   {
+    "file": "glass_2.flac",
+    "root": 82.58,
+    "src": "vcsl__glass3_A#4_Slow_1_Main.wav",
+    "named": 70
+   },
+   {
+    "file": "glass_3.flac",
+    "root": 86.03,
+    "src": "vcsl__glass4_D5_Slow_2_Main.wav",
+    "named": 74
+   }
+  ],
+  "vibes": [
+   {
+    "file": "vibes_0.flac",
+    "root": 56.91,
+    "src": "vcsl__Vibes_bowed_A2_rr1_Main.wav",
+    "named": 45
+   },
+   {
+    "file": "vibes_1.flac",
+    "root": 63.96,
+    "src": "vcsl__Vibes_bowed_E3_rr1_Main.wav",
+    "named": 52
+   },
+   {
+    "file": "vibes_2.flac",
+    "root": 67.08,
+    "src": "vcsl__Vibes_bowed_G3_rr1_Main.wav",
+    "named": 55
+   },
+   {
+    "file": "vibes_3.flac",
+    "root": 74.01,
+    "src": "vcsl__Vibes_bowed_D4_rr1_Main.wav",
+    "named": 62
+   },
+   {
+    "file": "vibes_4.flac",
+    "root": 81.01,
+    "src": "vcsl__Vibes_bowed_A4_rr1_Main.wav",
+    "named": 69
+   },
+   {
+    "file": "vibes_5.flac",
+    "root": 87.98,
+    "src": "vcsl__Vibes_bowed_E5_rr1_Main.wav",
+    "named": 76
+   }
+  ],
+  "psaltery": [
+   {
+    "file": "psaltery_0.flac",
+    "root": 74.01,
+    "src": "vcsl__BowedPsaltery_D4_Main_LongBow_rr1.wav",
+    "named": 62
+   },
+   {
+    "file": "psaltery_1.flac",
+    "root": 78.01,
+    "src": "vcsl__BowedPsaltery_F#4_Main_LongBow_rr1.wav",
+    "named": 66
+   },
+   {
+    "file": "psaltery_2.flac",
+    "root": 86.01,
+    "src": "vcsl__BowedPsaltery_D5_Main_LongBow_rr2.wav",
+    "named": 74
+   }
+  ]
+ },
+ "beds": {
+  "ocean": {
+   "file": "ocean.m4a",
+   "src": "commons__Ocean_Waves_on_a_Tropical_Beach.ogg",
+   "seconds": 75
+  },
+  "water": {
+   "file": "water.m4a",
+   "src": "commons__Water_flowing_pouring_trickling.ogg",
+   "seconds": 60
+  },
+  "rain": {
+   "file": "rain.m4a",
+   "src": "commons__Rain_against_the_window.ogg",
+   "seconds": 60
+  },
+  "wind": {
+   "file": "wind.m4a",
+   "src": "commons__Howling_wind.ogg",
+   "seconds": 80
+  }
+ }
+}
