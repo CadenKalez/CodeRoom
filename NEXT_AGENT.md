@@ -46,6 +46,17 @@ cloud of glowing "code bubbles" joined by swaying strands (inspired by the Code 
   JS ≈ 2 ms/frame on this repo; `renderTest(10)` → peak −7 dB, RMS −27 dB, 0 NaN
   (with boot: RMS −22 dB; ambience only: peak −18 dB). Synth-only — no samples — so not the real mix.
 
+- **Layout physics on big repos (sm64, 3,020 modules / 5,760 links):** `tick` was ~145 ms of a
+  ~160 ms frame (headless Chromium in a slow cloud box) — ~1 M `repel()` calls per frame, and each
+  in-range one cost ~200 ns because node objects come in many hidden-class shapes. `repelGrid()` now
+  does the *same* pushes (same 300 grid, same pairs — checked against brute force to 1e-14) on typed
+  arrays sorted by cell: one tick 109 → 9.9 ms, settled layout identical (overlaps, NN spacing, Rg,
+  group spread). Whole frame: JS 150–170 → 25–38 ms there. This matters for the first ~10 s after
+  opening (the bloom) and for every drag (it reheats `alpha` to 0.06). Repos ≤ 300 modules still use
+  the plain O(n²) `repel()` loop, unchanged.
+- Next-biggest costs on sm64 after a selection: `overlay` (2D rings/labels) ~6 ms, `bubbles` ~6 ms,
+  `lines` ~4 ms (container numbers; expect ~3–4× less on an M-series Mac). Not yet measured in WebKit.
+
 ## How to verify (do this, don't guess)
 
 - **Visuals/FPS:** run `python3 server.py --port 8765` and use the built-in browser pane at

@@ -389,29 +389,67 @@
     b.vx -= dx * f; b.vy -= dy * f; b.vz -= dz * f;
   }
   const CELL = 300, cellKey = (x, y, z) => ((x + 2048) * 4096 + (y + 2048)) * 4096 + (z + 2048);
+  // big repos: the same pushes as repel(), between bubbles in neighbouring grid cells only. Runs on typed
+  // arrays sorted by cell (node objects come in many shapes, so per-pair property access was ~10× slower),
+  // and visits each pair of neighbouring cells once.
+  let gx, gy, gz, gr, gfx, gfy, gfz, gOrder, gCell;
+  function repelGrid() {
+    const N = nodes.length, CUT2G = CELL * CELL;
+    if (!gx || gx.length < N) {
+      const M = Math.ceil(N * 1.25);
+      [gx, gy, gz, gr, gfx, gfy, gfz] = Array.from({ length: 7 }, () => new Float64Array(M));
+      gOrder = new Int32Array(M); gCell = new Int32Array(M);
+    }
+    // bucket the bubbles into cells, then lay them out cell by cell
+    const ids = new Map(), keys = [], cxs = [], cys = [], czs = [];
+    for (let i = 0; i < N; i++) {
+      const n = nodes[i], cx = Math.floor(n.x / CELL), cy = Math.floor(n.y / CELL), cz = Math.floor(n.z / CELL);
+      const k = cellKey(cx, cy, cz);
+      let id = ids.get(k);
+      if (id === undefined) { id = keys.length; ids.set(k, id); keys.push(k); cxs.push(cx); cys.push(cy); czs.push(cz); }
+      gCell[i] = id;
+    }
+    const C = keys.length, start = new Int32Array(C + 1);
+    for (let i = 0; i < N; i++) start[gCell[i] + 1]++;
+    for (let c = 0; c < C; c++) start[c + 1] += start[c];
+    const fill = start.slice(0, C);
+    for (let i = 0; i < N; i++) {
+      const s = fill[gCell[i]]++, n = nodes[i];
+      gOrder[s] = i; gx[s] = n.x; gy[s] = n.y; gz[s] = n.z; gr[s] = n.r; gfx[s] = gfy[s] = gfz[s] = 0;
+    }
+    for (let a = 0; a < C; a++) {
+      const a0 = start[a], a1 = start[a + 1];
+      for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) {
+        const b = ids.get(cellKey(cxs[a] + dx, cys[a] + dy, czs[a] + dz));
+        if (b === undefined || b < a) continue;                 // each pair of cells once
+        const b1 = start[b + 1];
+        for (let i = a0; i < a1; i++) {
+          const ax = gx[i], ay = gy[i], az = gz[i], ar = gr[i] + 8;
+          let fxi = 0, fyi = 0, fzi = 0;
+          for (let j = b === a ? i + 1 : start[b]; j < b1; j++) {
+            const ex = ax - gx[j], ey = ay - gy[j], ez = az - gz[j];
+            const d2 = ex * ex + ey * ey + ez * ez + 0.01;
+            if (d2 > CUT2G) continue;
+            const d = Math.sqrt(d2), minD = ar + gr[j];
+            let f = 3200 / d2 * alpha;
+            if (d < minD) f += (minD - d) * 0.06;
+            f /= d;
+            fxi += ex * f; fyi += ey * f; fzi += ez * f;
+            gfx[j] -= ex * f; gfy[j] -= ey * f; gfz[j] -= ez * f;
+          }
+          gfx[i] += fxi; gfy[i] += fyi; gfz[i] += fzi;
+        }
+      }
+    }
+    for (let s = 0; s < N; s++) { const n = nodes[gOrder[s]]; n.vx += gfx[s]; n.vy += gfy[s]; n.vz += gfz[s]; }
+  }
   function tick() {
     if (alpha < 0.004) return;
     const N = nodes.length;
     if (N <= 300) {
       CUT2 = 250000;
       for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) repel(nodes[i], nodes[j]);
-    } else {
-      // big repos: only neighbours in the surrounding grid cells push each other
-      CUT2 = CELL * CELL;
-      const grid = new Map();
-      for (const n of nodes) {
-        n.cx = Math.floor(n.x / CELL); n.cy = Math.floor(n.y / CELL); n.cz = Math.floor(n.z / CELL);
-        const k = cellKey(n.cx, n.cy, n.cz);
-        let arr = grid.get(k); if (!arr) grid.set(k, (arr = []));
-        arr.push(n);
-      }
-      for (const a of nodes) {
-        for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) {
-          const arr = grid.get(cellKey(a.cx + dx, a.cy + dy, a.cz + dz));
-          if (arr) for (const b of arr) if (b.i > a.i) repel(a, b);
-        }
-      }
-    }
+    } else repelGrid();
     for (const l of links) {
       const a = l.s, b = l.t;
       const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z;
