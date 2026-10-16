@@ -7,6 +7,8 @@ the modules are densest (the camera drifts to follow it), swinging to whatever y
 
 ## Open it
 
+- **Download:** the installer (`.dmg`) is on the [Releases page](https://github.com/CadenKalez/CodeRoom/releases);
+  the release notes cover the first-launch security prompt.
 - **Mac app:** double-click `Code Room.app` (on your Desktop). Open a repository with
   **File › Open Repository…** (⌘O), the repo button in the header, or by dropping a folder on the
   window or the Dock icon.
@@ -17,6 +19,26 @@ Rebuild and reinstall the app after editing anything here:
 ```bash
 ./build_app.sh            # installs to ~/Desktop; pass another folder to install elsewhere
 ```
+
+## Build from GitHub
+
+Needs the Xcode Command Line Tools once (`xcode-select --install`). Paste into Terminal:
+
+```bash
+cd ~/Downloads
+git clone -b claude/admiring-bell-17x2fh https://github.com/CadenKalez/CodeRoom.git CodeRoom-git
+cd CodeRoom-git
+cp -R ~/Downloads/CodeRoom/samples ~/Downloads/CodeRoom/music .
+osascript -e 'tell application id "local.coderoom.app" to quit'
+bash build_app.sh
+open ~/Desktop/"Code Room.app"
+```
+
+- The sample pack (`samples/`) and music (`music/`) aren't in the repo; the `cp` line brings them in
+  from an existing local copy. Without them the app still builds, with synthesized sound only.
+- To update later: `cd ~/Downloads/CodeRoom-git && git pull`, then the last three lines again.
+- Paste the lines without `#` comments: zsh doesn't treat them as comments when pasted, and an
+  apostrophe in one leaves the shell waiting at `quote>` (press Control + C to get out).
 
 Code Room only **reads** the folders you open. The single file it writes is the recent-repos list
 (`~/Library/Application Support/Code Room/recent.json`); the app logs to `~/Library/Logs/Code Room.log`.

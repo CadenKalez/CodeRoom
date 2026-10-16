@@ -28,6 +28,35 @@ cloud of glowing "code bubbles" joined by swaying strands (inspired by the Code 
   selection/neighbour halos, bloom-wave halos and the core's pool of light on the floor.
 - Measured in Chromium at 60 fps, 6–9 ms JS on SC4-Decomp; **not yet measured in the WebKit app** (press F).
 
+## GitHub copy (CadenKalez/CodeRoom) — read this if you're working from the repo, not the Mac
+
+- The code has moved on since the list above: `sound.js` now also plays a **CC0 sample pack**
+  (`samples/` + `samples/manifest.json`) and a far-off **radio** of tracker/chiptune music
+  (`music/` + `music/playlist.json`, `.mod` files played by `modPlayer`, sometimes on the felt piano).
+- **`samples/` and `music/` were not uploaded to the repo.** They only exist in `~/Downloads/CodeRoom/`
+  on the user's Mac. Without them the room stays purely synthesized and the radio stays silent
+  (one expected 404 + a "samples unavailable" warning in the console). `build_app.sh` now warns
+  and carries on instead of failing when either folder is missing.
+- `build/` holds an **old** app bundle (its `index.html`/`sound.js` predate the current sources);
+  it's a build artifact, rebuild with `./build_app.sh` rather than trusting it.
+- Fixed: `CodeRoomSound.renderTest()` crashed with `piano is not a function` (its `piano` option
+  shadowed the `piano()` voice). The option is now bound to `onPiano` internally; the call signature
+  (`renderTest(s, { piano: true, track })`) is unchanged.
+- Smoke-tested in headless Chromium (software GL, so fps there is meaningless): no page errors,
+  JS ≈ 2 ms/frame on this repo; `renderTest(10)` → peak −7 dB, RMS −27 dB, 0 NaN
+  (with boot: RMS −22 dB; ambience only: peak −18 dB). Synth-only — no samples — so not the real mix.
+
+- **Layout physics on big repos (sm64, 3,020 modules / 5,760 links):** `tick` was ~145 ms of a
+  ~160 ms frame (headless Chromium in a slow cloud box) — ~1 M `repel()` calls per frame, and each
+  in-range one cost ~200 ns because node objects come in many hidden-class shapes. `repelGrid()` now
+  does the *same* pushes (same 300 grid, same pairs — checked against brute force to 1e-14) on typed
+  arrays sorted by cell: one tick 109 → 9.9 ms, settled layout identical (overlaps, NN spacing, Rg,
+  group spread). Whole frame: JS 150–170 → 25–38 ms there. This matters for the first ~10 s after
+  opening (the bloom) and for every drag (it reheats `alpha` to 0.06). Repos ≤ 300 modules still use
+  the plain O(n²) `repel()` loop, unchanged.
+- Next-biggest costs on sm64 after a selection: `overlay` (2D rings/labels) ~6 ms, `bubbles` ~6 ms,
+  `lines` ~4 ms (container numbers; expect ~3–4× less on an M-series Mac). Not yet measured in WebKit.
+
 ## How to verify (do this, don't guess)
 
 - **Visuals/FPS:** run `python3 server.py --port 8765` and use the built-in browser pane at

@@ -5,6 +5,9 @@
 #     ./build_app.sh ~/Applications     # build + install somewhere else
 #
 # Needs the Xcode Command Line Tools (swiftc, iconutil) and Python 3 at runtime.
+# Release builds (see .github/workflows/release.yml) also set:
+#     UNIVERSAL=1      one app for Apple silicon and Intel Macs
+#     VERSION=1.2.0    stamped into the app's Info.plist
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -12,16 +15,33 @@ BUILD="$HERE/build"
 APP="$BUILD/Code Room.app"
 DEST="${1:-$HOME/Desktop}"
 BUNDLE_ID="local.coderoom.app"
+UNIVERSAL="${UNIVERSAL:-0}"
+VERSION="${VERSION:-}"
 
 echo "→ building $APP"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
-swiftc -O -swift-version 5 -o "$APP/Contents/MacOS/CodeRoom" "$HERE/app/main.swift" -framework Cocoa -framework WebKit
+if [ "$UNIVERSAL" = 1 ]; then
+  for arch in arm64 x86_64; do
+    swiftc -O -swift-version 5 -target "$arch-apple-macos13" -o "$BUILD/CodeRoom-$arch" "$HERE/app/main.swift" -framework Cocoa -framework WebKit
+  done
+  lipo -create -output "$APP/Contents/MacOS/CodeRoom" "$BUILD/CodeRoom-arm64" "$BUILD/CodeRoom-x86_64"
+  rm -f "$BUILD/CodeRoom-arm64" "$BUILD/CodeRoom-x86_64"
+else
+  swiftc -O -swift-version 5 -o "$APP/Contents/MacOS/CodeRoom" "$HERE/app/main.swift" -framework Cocoa -framework WebKit
+fi
 cp "$HERE/app/Info.plist" "$APP/Contents/Info.plist"
+if [ -n "$VERSION" ]; then
+  /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" -c "Set :CFBundleVersion $VERSION" "$APP/Contents/Info.plist"
+fi
 cp "$HERE/server.py" "$HERE/index.html" "$HERE/sound.js" "$APP/Contents/Resources/"
-cp -R "$HERE/samples" "$APP/Contents/Resources/samples"   # the CC0 sample pack
-cp -R "$HERE/music" "$APP/Contents/Resources/music"       # openly licensed tracker / chiptune music
+# the CC0 sample pack and the openly licensed tracker / chiptune music; without them the room
+# falls back to pure synthesis and the radio stays silent, so a missing folder is a warning, not an error
+for d in samples music; do
+  if [ -d "$HERE/$d" ]; then cp -R "$HERE/$d" "$APP/Contents/Resources/$d"
+  else echo "  ! $d/ not found — building without it"; fi
+done
 
 echo "→ drawing the icon"
 swiftc -O -o "$BUILD/make_icon" "$HERE/app/make_icon.swift" -framework Cocoa

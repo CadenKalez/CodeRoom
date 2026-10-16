@@ -1334,7 +1334,7 @@
 
     // renders a scripted stretch of the room offline and reports levels (for tuning; not used live).
     // track: a playlist title / file (or index) to render through the far room.
-    async renderTest(seconds = 16, { sfx: withSfx = true, music: withMusic = true, boot: withBoot = false, ambience = true, track = null, piano = false, real = true, only = null } = {}) {
+    async renderTest(seconds = 16, { sfx: withSfx = true, music: withMusic = true, boot: withBoot = false, ambience = true, track = null, piano: onPiano = false, real = true, only = null } = {}) {
       if (bank.loading) await bank.loading;
       const sr = 48000, off = new OfflineAudioContext(2, sr * seconds, sr);
       const saved = { ctx, master, dry, revIn, delIn, echoIn, wave, white, pink, groups, meters, pad, strings, beds, started, enabled, sub, chordIx, upgraded, colorFilter, airGain, synthTide, windSrc };
@@ -1352,7 +1352,7 @@
       if (track !== null) {
         const list = await radioList();
         const i = typeof track === "number" ? track : list.findIndex((e) => (e.title + " " + e.file).toLowerCase().includes(String(track).toLowerCase()));
-        await radioPlay(list[Math.max(0, i)], 0.5, { seconds: seconds - 1, prefill: true, piano });
+        await radioPlay(list[Math.max(0, i)], 0.5, { seconds: seconds - 1, prefill: true, piano: onPiano });
       } else if (withMusic) { piano(6.5); }
       if (withBoot) bootAt(0.3, null);
       if (withSfx) {
