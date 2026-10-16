@@ -10,11 +10,11 @@
 		</data>
 		<key>Resources/index.html</key>
 		<data>
-		rNjnwGazOGDRoIxQYFuu/SDxuYg=
+		hHnJ1aJJnpi/PjL27YgrPS9LVqA=
 		</data>
 		<key>Resources/music/CREDITS.md</key>
 		<data>
-		RKUv7XyfpS8Wanyi7SnrfO1Lvso=
+		r4UeN/Notepq1EuQnpksQ1puQ7c=
 		</data>
 		<key>Resources/music/drozerix_air_ride.mod</key>
 		<data>
@@ -114,7 +114,7 @@
 		</data>
 		<key>Resources/music/playlist.json</key>
 		<data>
-		7CAjOv2Oy9rPTwBM81kzwE0uuIU=
+		WqvuEVgrTwkZNIi0eBfb9Xp83YI=
 		</data>
 		<key>Resources/music/serpent_sundawn.mod</key>
 		<data>
@@ -139,6 +139,10 @@
 		<key>Resources/music/skiff_under_the_stars.mp3</key>
 		<data>
 		8hs1FvrR6t47zgr4V3Qjn9kx3jk=
+		</data>
+		<key>Resources/samples/.DS_Store</key>
+		<data>
+		9kUgwNAxHpW37dRZPsEDNCw4FQY=
 		</data>
 		<key>Resources/samples/CREDITS.md</key>
 		<data>
@@ -698,7 +702,7 @@
 		</data>
 		<key>Resources/sound.js</key>
 		<data>
-		e5euoso5dQs43tIyLlEXXpYtxvY=
+		GB0GgOfT+DsmFufz+1/vf4ZdAcA=
 		</data>
 	</dict>
 	<key>files2</key>
@@ -714,14 +718,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			ObCpt+OYvkb3iqMHL7gZBd4K0PkJAsbaHXik2ST/+88=
+			i3t3G7bw6WN/dwYcJuiK/BEBkbIvOb7SsDce5NjtRSk=
 			</data>
 		</dict>
 		<key>Resources/music/CREDITS.md</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			x591KnA2pmW0i/M4NcSZzfXYM7cJWoY5GTjHMRgflbc=
+			DvjXVAJ7IAo+0NouCREQwi8IA3t+Xs84pw4hkNB3dyY=
 			</data>
 		</dict>
 		<key>Resources/music/drozerix_air_ride.mod</key>
@@ -896,7 +900,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			SMPteYQsg5+LumQJvdHepl+f1VNpPKP5NljeonQXaZ4=
+			rjES1qsqx0gbfzp2dyf1GPErBv0UiJKtZObl9fRmgio=
 			</data>
 		</dict>
 		<key>Resources/music/serpent_sundawn.mod</key>
@@ -1918,7 +1922,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			NXZA9SaGuFXBtqSahUvNTCXI7fjuIip1U3MXBrwEdxI=
+			7+mv/sBXWZokXq78xZNBwrx3fnMTFgD/BBeSnZ4V6AM=
 			</data>
 		</dict>
 	</dict>

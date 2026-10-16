@@ -15,8 +15,14 @@ curve to its new place, and in the city it lands and swells into its building:
   buildings (footprint = lines, height = functions) with code on their roofs, and references arch
   over the rooftops.
 
-Now and then a storm passes far off: light flickers inside clouds behind the room (a bolt only
-rarely), and real thunder rolls in seconds later, sooner and deeper as the storm comes closer.
+Now and then a storm passes far off: light flickers softly inside clouds at the edges of the room (a
+bolt only rarely), and real thunder rolls in seconds later and echoes back off far hills, sooner and
+closer as the storm comes in. While thunder rolls or a melody plays, the rest of the room steps back
+(dips and darkens) so they never fight. The radio now and then plays *Partenza*, an original aria
+written for the room (felt piano, bowed chords, violin and flute), played live.
+
+Easter egg: every ten minutes or so a little Claude Code robot drifts through the void (click it), and
+two tiny ones float up among the motes if you look closely.
 
 ## Open it
 
@@ -56,6 +62,7 @@ is respected), otherwise from a walk that skips `node_modules`, `build`, `vendor
 | **♫ Music** | melodies over the ambience (felt piano, violin, flute), far-off chip tunes and keygen music |
 | **ϟ Storm** | let distant storms pass now and then (lightning in the clouds, thunder) |
 | `1` `2` `3` · `V` | Cloud / Branches / City · next view |
+| 🐞 (corner) · `B` | the hidden debug menu: bring a storm, lightning, thunder near / far, a piano / violin / flute melody, the aria, a keygen track, stop the radio, a bloom, a beat, the robot |
 | `/` · `O` · `F` · `Esc` | search · open repo · FPS readout · deselect |
 
 ## Files

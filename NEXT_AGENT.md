@@ -46,6 +46,29 @@ cloud of glowing "code bubbles" joined by swaying strands (inspired by the Code 
 - **Keygen radio**: `parseXM()` / `xmPlayer()` (FastTracker 2). Bundled PD Drozerix tracks; scene
   classics are `"remote"` playlist entries fetched by `server.py` (`/music/remote/<id>`) into the cache.
 
+## Done (2026-10-16, evening)
+
+- **Debug menu**: the bug in the bottom-right `.corner` (or B) opens `#dbgMenu`, built from `DEBUG` in
+  `index.html`; its status line shows the storm phase, the robot's next visit and the radio.
+- **Robot easter egg**: `robotSummon()` / `robotFrame()` (DOM sprite `#robot`, every 9–12 min, click
+  to hop); two tiny robots among the motes are `drawMoteBots()` (sprite atlas cell 16, drawn from
+  `drawBolts()` so the frame loop stays untouched). Voice: `SFX.robot(kind)`.
+- **Storm, softer**: flashes are soft swells at the sides, dim, rarer; thunder has a 220 Hz "rumble a
+  laptop can play" band and five rolling echoes (`thunderAt()`), plus unseen far rolls (`distantRoll()`).
+  Check audibility on laptop speakers, not just full-band RMS: far thunder measures −36…−48 dB above
+  180 Hz, about level with the ambience.
+- **Thunder bus**: thunder (and its echoes and sub swell) plays on its own `storm` group, so `thunderAt()`
+  can dip and darken the beds (rain, sea, wind), the pads and the music under each strike without
+  muffling itself. Measured: a close strike rolls at −21…−24 dB per second, a far one −25…−29, the
+  ambience −27. Dragging a bubble peaks ≈ −23 dB, its release ≈ −24, a select ≈ −13.
+- **Muffle stage**: every group is fader → duck → muffle (gain + lowpass) → returns. `muffle()` is
+  for events (thunder, melodies); `duck()` stays for held ducks (the radio), so they never undo each other.
+- **Aria** "Partenza": `ARIA_CHORDS` / `ARIA_BARS` / `ariaPlayer()` in `sound.js`, a playlist entry with
+  `"synth": "aria"` that the radio plays in the room (`farRoom(..., here = true)`), early in every
+  rotation. It is an original piece (the user asked for a Bocelli cover; that song is under copyright).
+  An offline render of it is ~3× slower than real time because prefill schedules every bar at once;
+  live it pumps one bar ahead and is light.
+
 ## How to verify (do this, don't guess)
 
 - **Visuals/FPS:** run `python3 server.py --port 8765` and use the built-in browser pane at
@@ -73,6 +96,17 @@ cloud of glowing "code bubbles" joined by swaying strands (inspired by the Code 
 - Don't reference `let/const` declared later in `index.html` from code that runs at load (TDZ).
 - The adaptive resolution logic must not react to load hitches (`settle()` after loads/resizes);
   the user notices blur immediately.
+- In WebKit a GPU-backed 2D canvas used as a WebGL texture source is read back from the GPU process
+  synchronously, waiting for the frame in flight (~4 ms a call). Canvases that feed `texSubImage2D`
+  are made with `{ willReadFrequently: true }` (CPU-backed, ~2 ms).
+- The code atlases hold 144 + 64 slots, fewer than the bubbles that want code on big repos.
+  `rankCode()` gives slots to the biggest bubbles on screen, and `codeSlot()` never takes a slot from a
+  bubble drawn in the last frame. The plain LRU used to evict bubbles still on screen and redraw 3
+  slots every frame (9–12 ms of JS in WebKit, Cloud only).
+- Strands are instanced (`ANGLE_instanced_arrays`): `STRAND_VS` rebuilds on the GPU the same curve
+  `drawStrandsCPU()` draws (the fallback). Change both together; they render within 1 level per pixel.
+  After an instanced draw, reset `vertexAttribDivisorANGLE(loc, 0)`: WebGL1 has no VAOs, so a leftover
+  divisor breaks the next batch that uses that attribute slot.
 - `recent.json` (`~/Library/Application Support/Code Room/`) is shared by the app and browser mode;
   browser tests change which repo the app opens next. Restore the user's repo (`SC4-Decomp/src`)
   after testing.

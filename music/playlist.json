@@ -363,5 +363,13 @@
   "remote": 180519,
   "gain": -10.4,
   "keygen": true
+ },
+ {
+  "file": "aria.synth",
+  "synth": "aria",
+  "title": "Partenza (an aria for the void)",
+  "artist": "Code Room",
+  "license": "original, played live",
+  "gain": 13
  }
 ]

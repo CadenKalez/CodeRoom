@@ -231,10 +231,15 @@
   }
 
   /* view switcher, bottom-right: the same modules as a cloud, a branching tree or a city */
-  .views {
-    position: fixed; right: 16px; bottom: 96px; z-index: 3; display: flex; gap: 2px; padding: 4px; border-radius: 14px;
-    background: var(--glass); border: 1px solid var(--glass-edge); box-shadow: 0 0 30px rgba(79, 243, 255, 0.08);
+  /* bottom-right corner: the bug (opens the hidden debug menu) beside the view switcher */
+  .corner {
+    position: fixed; right: 16px; bottom: 96px; z-index: 3; display: flex; align-items: center; gap: 8px;
     transition: right 0.35s cubic-bezier(.2,.8,.2,1);
+  }
+  aside.open ~ .corner { right: 412px; }
+  .views {
+    position: relative; display: flex; gap: 2px; padding: 4px; border-radius: 14px;
+    background: var(--glass); border: 1px solid var(--glass-edge); box-shadow: 0 0 30px rgba(79, 243, 255, 0.08);
   }
   .views .pill {
     position: absolute; top: 4px; bottom: 4px; left: 0; width: 0; border-radius: 10px; pointer-events: none;
@@ -252,12 +257,59 @@
   .views button:hover svg { transform: translateY(-1px) scale(1.06); }
   .views button[aria-checked="true"] { color: #fff; }
   .views button:focus-visible { outline: 1px solid var(--dep); }
-  aside.open ~ .views { right: 412px; }
+  .bugbtn {
+    all: unset; cursor: pointer; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%;
+    color: var(--ink-dim); background: var(--glass); border: 1px solid var(--glass-edge); opacity: 0.5;
+    transition: opacity 0.3s, color 0.3s, transform 0.4s cubic-bezier(.3,1.4,.4,1), border-color 0.3s;
+  }
+  .bugbtn svg { width: 18px; height: 18px; }
+  .bugbtn:hover, .bugbtn[aria-expanded="true"] { opacity: 1; color: var(--accent); border-color: rgba(255, 225, 79, 0.5); transform: rotate(-12deg); }
+  .bugbtn:focus-visible { outline: 1px solid var(--accent); }
+  .dbg {
+    position: absolute; right: 0; bottom: calc(100% + 10px); width: 304px; padding: 12px 12px 10px; border-radius: 14px;
+    background: var(--glass-solid); border: 1px solid rgba(255, 225, 79, 0.28); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    transform-origin: bottom right; animation: dbgIn 0.28s cubic-bezier(.2,.9,.3,1.25);
+  }
+  @keyframes dbgIn { from { opacity: 0; transform: translateY(8px) scale(0.96); } }
+  .dbg .title { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; font: 700 12px var(--display); letter-spacing: 0.14em; color: var(--accent); }
+  .dbg .title small { font: 10px var(--mono); letter-spacing: 0; color: var(--ink-dim); }
+  .dbg h4 { margin: 10px 0 5px; font: 600 9.5px var(--display); letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-dim); }
+  .dbg .row { display: flex; flex-wrap: wrap; gap: 5px; }
+  .dbg .row button {
+    all: unset; cursor: pointer; padding: 5px 9px; border-radius: 8px; font-size: 11px; color: var(--ink);
+    border: 1px solid var(--glass-edge); background: rgba(255, 255, 255, 0.04); transition: border-color 0.2s, background 0.2s;
+  }
+  .dbg .row button:hover { border-color: var(--dep); background: rgba(79, 243, 255, 0.1); }
+  .dbg .row button:active { transform: translateY(1px); }
+  .dbg .row button:focus-visible { outline: 1px solid var(--dep); }
+  .dbg .status { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--glass-edge); font-size: 10px; line-height: 1.65; color: var(--ink-dim); white-space: pre-line; }
+
+  /* the easter egg: a little Claude Code robot drifts through the void now and then */
+  .robot { position: fixed; left: 0; top: 0; z-index: 4; pointer-events: none; will-change: transform; }
+  .robot .bot { display: block; width: 54px; height: 48px; pointer-events: auto; cursor: pointer; filter: drop-shadow(0 0 10px rgba(217, 119, 87, 0.55)); }
+  .robot .bot:not(.step) .legs-b, .robot .bot.step .legs-a { display: none; }
+  .robot .flame { animation: flame 0.12s steps(2) infinite; }
+  @keyframes flame { 50% { opacity: 0.5; transform: translateY(0.5px); } }
+  .robot .eyes { transform-box: fill-box; transform-origin: center; animation: blink 3.8s infinite; }
+  @keyframes blink { 0%, 94%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.15); } }
+  .robot.wave .arm-r { animation: wave 0.3s ease-in-out infinite alternate; }
+  @keyframes wave { to { transform: translate(0, -3px); } }
+  .robot.hop .bot { animation: hop 0.55s cubic-bezier(.3,1.6,.5,1); }
+  @keyframes hop { 40% { transform: translateY(-16px) scale(1.06, 0.94); } }
+  .robot .say {
+    position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%) scale(0.9); opacity: 0; white-space: nowrap;
+    padding: 6px 10px; border-radius: 10px; font: 600 11px var(--mono); color: #fff3ec; background: rgba(36, 16, 11, 0.9);
+    border: 1px solid rgba(217, 119, 87, 0.6); transition: opacity 0.35s, transform 0.35s cubic-bezier(.3,1.4,.4,1);
+  }
+  .robot .say.show { opacity: 1; transform: translateX(-50%) scale(1); }
+  .robot .say::after { content: ""; position: absolute; left: 50%; top: 100%; margin-left: -5px; border: 5px solid transparent; border-top-color: rgba(217, 119, 87, 0.6); }
+  .robot .spark { position: absolute; left: 24px; top: 16px; color: #ffd28c; font-size: 11px; pointer-events: none; animation: spark 0.75s ease-out forwards; }
+  @keyframes spark { to { transform: translate(var(--dx), var(--dy)) scale(0.4); opacity: 0; } }
 
   @media (max-width: 720px) {
-    .views { bottom: 16px; }
+    .corner { bottom: 16px; }
     .legend { bottom: 80px; max-width: calc(100vw - 32px); max-height: 18vh; }
-    aside.open ~ .views { display: none; }
+    aside.open ~ .corner { display: none; }
     header { padding: 10px 16px; gap: 8px; }
     h1 { font-size: 15px; }
     .stats { display: none; }
@@ -333,6 +385,11 @@
 </aside>
 
 <div class="legend" id="legend"></div>
+<div class="corner" id="corner">
+<div class="dbg" id="dbgMenu" role="dialog" aria-label="Debug" hidden></div>
+<button class="bugbtn" id="bugBtn" aria-expanded="false" aria-controls="dbgMenu" title="Debug: trigger storms, melodies, the radio… (B)">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 10a4 4 0 0 1 8 0v5a4 4 0 0 1-8 0Z"/><path d="M9.5 6.8 8 4.6M14.5 6.8 16 4.6M8.5 9h7M12 11.5V19"/><path d="M8 12H4.5M8 15.5H4M8.6 18l-2.8 2M16 12h3.5M16 15.5h4M15.4 18l2.8 2"/></svg>
+</button>
 <div class="views" id="views" role="radiogroup" aria-label="View">
   <span class="pill" id="viewPill"></span>
   <button role="radio" data-mode="cloud" aria-checked="true" title="Cloud: modules float where their references pull them (1)">
@@ -341,6 +398,23 @@
     <svg viewBox="0 0 28 20" fill="none" stroke="currentColor" stroke-width="1.15"><path d="M14 10 7 5.5M14 10l7-5M14 10l.5 6.5M7 5.5 3.6 3.4M7 5.5 4.2 8.6"/><circle cx="14" cy="10" r="1.7" fill="currentColor"/><g fill="currentColor" stroke="none"><circle cx="3.4" cy="3.2" r="1.4"/><circle cx="4" cy="8.8" r="1.3"/><circle cx="21.2" cy="4.9" r="1.7"/><circle cx="24.2" cy="3" r="1"/><circle cx="24.4" cy="7" r="1.1"/><circle cx="14.6" cy="16.8" r="1.5"/><circle cx="12" cy="18.2" r=".9"/><circle cx="17.1" cy="18.3" r=".9"/></g></svg>Branches</button>
   <button role="radio" data-mode="city" aria-checked="false" title="City: folders become districts, files buildings, height = functions (3)">
     <svg viewBox="0 0 28 20" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linejoin="round"><path d="M2 13.6 14 19l12-5.4L14 8.2Z" opacity=".5"/><path d="M6 13.4V8.6l3.4 1.5v4.8M6 8.6 9.4 7l3.4 1.6-3.4 1.5"/><path d="M14 14.6V3.8l4.2 1.9v10.8M14 3.8 18.2 2l4.2 1.8-4.2 1.9"/></svg>City</button>
+</div>
+</div>
+<div class="robot" id="robot" hidden>
+  <div class="say" id="robotSay"></div>
+  <svg class="bot" id="robotBot" viewBox="0 0 18 16" shape-rendering="crispEdges" role="button" aria-label="A little robot">
+    <g class="flame"><rect x="7.5" y="11" width="3" height="2" fill="#ffd28c"/><rect x="8" y="13" width="2" height="2" fill="#ff9a3d"/></g>
+    <g fill="#d97757">
+      <rect x="4" y="2" width="10" height="7"/>
+      <rect x="2" y="5" width="2" height="2"/>
+      <g class="arm-r"><rect x="14" y="5" width="2" height="2"/></g>
+      <g class="legs-a"><rect x="5" y="9" width="1" height="2"/><rect x="7" y="9" width="1" height="2"/><rect x="10" y="9" width="1" height="2"/><rect x="12" y="9" width="1" height="2"/></g>
+      <g class="legs-b"><rect x="5" y="9" width="1" height="1"/><rect x="7" y="9" width="1" height="2"/><rect x="10" y="9" width="1" height="1"/><rect x="12" y="9" width="1" height="2"/></g>
+    </g>
+    <rect x="4" y="2" width="10" height="1" fill="#ec9a7f"/>
+    <rect x="4" y="8" width="10" height="1" fill="#b65a3f"/>
+    <g class="eyes" fill="#1a0f0c"><rect x="6" y="4" width="1" height="2"/><rect x="11" y="4" width="1" height="2"/></g>
+  </svg>
 </div>
 <div class="hint">size = functions &nbsp; strands = references<br>
   drag empty space · orbit &nbsp; drag bubble · shake it &nbsp; scroll · zoom<br>
@@ -399,7 +473,7 @@
   let mode = "cloud", morph = null, dirs = [], dirRoot = null, cityRects = [];
   const modeW = { cloud: 1, tree: 0, city: 0 };
 
-  function visible(n) { return !hiddenGroups.has(n.group); }
+  function visible(n) { return !hiddenGroups.size || !hiddenGroups.has(n.group); }   // runs ~4× per strand per frame
   const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
   const sstep = (a, b, v) => { const t = clamp01((v - a) / (b - a)); return t * t * (3 - 2 * t); };
   const lerp = (a, b, t) => a + (b - a) * t;
@@ -871,7 +945,7 @@
     throw new Error("WebGL unavailable");
   }
 
-  function program(vs, fs) {
+  function program(vs, fs, attr0) {
     const p = gl.createProgram();
     for (const [type, src] of [[gl.VERTEX_SHADER, vs], [gl.FRAGMENT_SHADER, fs]]) {
       const s = gl.createShader(type);
@@ -879,6 +953,7 @@
       if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
       gl.attachShader(p, s);
     }
+    if (attr0) gl.bindAttribLocation(p, 0, attr0);
     gl.linkProgram(p);
     if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
     const loc = {};
@@ -889,12 +964,60 @@
   const HIGHP = "#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\n";
   const SCREEN_VS = "uniform vec2 u_res;\nvec4 clip(vec2 p) { vec2 c = p / u_res * 2.0 - 1.0; return vec4(c.x, -c.y, 0.0, 1.0); }\n";
   // strands & rings: each segment is a quad; a gaussian across its width gives a soft glowing line
+  const LINE_FS = HIGHP + `
+    varying float v_side; varying vec4 v_col;
+    void main() { float f = exp(-v_side * v_side * 4.5) * v_col.a; gl_FragColor = vec4(v_col.rgb * f, f); }`;
   const lineProg = program(SCREEN_VS + `
     attribute vec2 a_pos; attribute float a_side; attribute vec4 a_col;
     varying float v_side; varying vec4 v_col;
-    void main() { v_side = a_side; v_col = a_col; gl_Position = clip(a_pos); }`, HIGHP + `
+    void main() { v_side = a_side; v_col = a_col; gl_Position = clip(a_pos); }`, LINE_FS);
+  // the strands, instanced: each strand's rope (NP points in the world) goes up as it is, and the vertex
+  // shader projects it and lays the same soft segments along it that lineSeg would (a smooth curve of
+  // quadratic pieces between the rope's midpoints, or a plain polyline for the faint ones)
+  const STRAND_VS = `
+    attribute vec3 a_seg;                       // per vertex: segment, which end (0 / 1), side (±1)
+    attribute vec3 a_p0, a_p1, a_p2, a_p3, a_p4;
+    #if NP > 5
+    attribute vec3 a_p5;
+    #endif
+    attribute float a_hw; attribute vec4 a_col;  // per strand: half width (< 0: a polyline), colour (alpha 0: not drawn)
+    uniform vec3 u_camT; uniform vec4 u_rot; uniform vec2 u_df;   // camera target; cos, sin of yaw and pitch; distance, F
     varying float v_side; varying vec4 v_col;
-    void main() { float f = exp(-v_side * v_side * 4.5) * v_col.a; gl_FragColor = vec4(v_col.rgb * f, f); }`);
+    vec2 S0, S1, S2, S3, S4, S5;
+    float nearZ;
+    vec2 project(vec3 w) {                      // as project() in JS
+      vec3 d = w - u_camT;
+      float x1 = d.x * u_rot.x - d.z * u_rot.y, z1 = d.x * u_rot.y + d.z * u_rot.x;
+      float y2 = d.y * u_rot.z - z1 * u_rot.w, depth = u_df.x - (d.y * u_rot.w + z1 * u_rot.z);
+      nearZ = min(nearZ, depth);
+      float s = u_df.y / depth;
+      return vec2(u_res.x * 0.5 + x1 * s, u_res.y * 0.5 - y2 * s);
+    }
+    vec2 P(int k) { if (k <= 0) return S0; if (k == 1) return S1; if (k == 2) return S2; if (k == 3) return S3; if (k == 4) return S4; return S5; }
+    const int SEGS = (NP - 2) * STEPS + 1;
+    vec2 curve(int i) {
+      if (i <= 0) return S0;
+      if (i >= SEGS) return P(NP - 1);
+      int k = (i - 1) / STEPS + 1;
+      float t = float(i - (k - 1) * STEPS) / float(STEPS), it = 1.0 - t;
+      vec2 pk = P(k), q = k == 1 ? S0 : (P(k - 1) + pk) * 0.5, m = (pk + P(k + 1)) * 0.5;
+      return it * it * q + 2.0 * it * t * pk + t * t * m;
+    }
+    void main() {
+      nearZ = 1e9;
+      S0 = project(a_p0); S1 = project(a_p1); S2 = project(a_p2); S3 = project(a_p3); S4 = project(a_p4); S5 = S4;
+    #if NP > 5
+      S5 = project(a_p5);
+    #endif
+      int j = int(a_seg.x + 0.5);
+      bool poly = a_hw < 0.0;
+      v_side = a_seg.z; v_col = a_col;
+      if (a_col.a == 0.0 || nearZ < 10.0 || (poly && j >= NP - 1)) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
+      vec2 A = poly ? P(j) : curve(j), B = poly ? P(j + 1) : curve(j + 1), d = B - A;
+      float len = length(d);
+      vec2 n = vec2(-d.y, d.x) / (len > 0.0 ? len : 1e-3) * abs(a_hw);
+      gl_Position = clip((a_seg.y > 0.5 ? B : A) + n * a_seg.z);
+    }`;
   // bubbles, confetti and pulses: textured or procedural quads, picked by a_mode (and the city's box faces:
   // their edges are drawn a pixel wide wherever the face is, which needs screen-space derivatives)
   const DERIV = !!gl.getExtension("OES_standard_derivatives");
@@ -1164,7 +1287,7 @@
     gl.uniform1i(L.u_atm, 5);
     gl.uniform4f(L.u_wander, wander.sx, wander.sy, wander.r, wander.vis ? wander.glow : 0);
     gl.uniform3f(L.u_wanderCol, wander.c[0], wander.c[1], wander.c[2]);
-    const amb = storm.light ? storm.light.i * 0.022 : 0;
+    const amb = storm.light ? storm.light.i * 0.006 : 0;
     gl.uniform3f(L.u_amb, amb * 0.7, amb * 0.76, amb);
     fullscreen(bgProg);
   }
@@ -1196,7 +1319,7 @@
     gl.uniform4f(L.u_core, light.sx, light.sy, light.r, light.vis ? light.core * (1 + 0.6 * light.kick) : 0);
     gl.uniform3f(L.u_sky, light.skyX, light.skyY, light.sky);
     const FL = storm.light;
-    gl.uniform4f(L.u_flash, FL ? FL.x : 0, FL ? FL.y : 0, FL ? FL.cloud : 1, FL ? Math.min(0.95, FL.i * 0.6) : 0);
+    gl.uniform4f(L.u_flash, FL ? FL.x : 0, FL ? FL.y : 0, FL ? FL.cloud : 1, FL ? Math.min(0.3, FL.i * 0.2) : 0);
     gl.uniform2f(L.u_fseed, FL ? FL.seed : 0, FL ? FL.seed * 0.37 : 0);
     fullscreen(atmEmitProg);
     // the bubbles stand in the light's way
@@ -1223,8 +1346,8 @@
     gl.uniform3f(L.u_coreCol, light.cr, light.cg, light.cb); gl.uniform3f(L.u_skyCol, 0.48, 0.55, 1.0);
     gl.uniform1f(L.u_fog, 0.55 + 0.25 * musicLevel);
     const SL = storm.light;
-    gl.uniform4f(L.u_flash, SL ? SL.x / W : 0, SL ? 1 - SL.y / H : 0, SL ? SL.r / W : 1, SL ? SL.i * 0.07 : 0); gl.uniform1f(L.u_asp, H / W);
-    gl.uniform2f(L.u_flashUV, SL ? SL.x / W : 0, SL ? 1 - SL.y / H : 0); gl.uniform1f(L.u_flashK, SL ? 0.6 : 0);
+    gl.uniform4f(L.u_flash, SL ? SL.x / W : 0, SL ? 1 - SL.y / H : 0, SL ? SL.r / W : 1, SL ? SL.i * 0.02 : 0); gl.uniform1f(L.u_asp, H / W);
+    gl.uniform2f(L.u_flashUV, SL ? SL.x / W : 0, SL ? 1 - SL.y / H : 0); gl.uniform1f(L.u_flashK, SL ? 0.32 : 0);
     fullscreen(atmScatterProg);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, glCanvas.width, glCanvas.height);
   }
@@ -1295,12 +1418,14 @@
     return cell;
   }
 
-  // code wrapped around the inside of each bubble: drawn lazily into an LRU atlas slot
+  // code wrapped around the inside of each bubble: drawn lazily into an LRU atlas slot. The scratch
+  // canvas is CPU-backed (willReadFrequently): in WebKit a GPU canvas is read back from the GPU process
+  // on upload, which stalls until it has caught up with the frame (~4 ms a slot instead of <1).
   const scratch = {};
   function renderCode(n, S) {
     let c = scratch[S];
     if (!c) { c = scratch[S] = document.createElement("canvas"); c.width = c.height = S; }
-    const g = c.getContext("2d"), m = S / 2, R = m - 1;
+    const g = c.getContext("2d", { willReadFrequently: true }), m = S / 2, R = m - 1;
     g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.clearRect(0, 0, S, S);
     g.save();
     g.beginPath(); g.arc(m, m, R, 0, Math.PI * 2); g.clip();
@@ -1325,18 +1450,48 @@
     g.restore();
     return c;
   }
-  let texBudget = 0;
-  function codeSlot(n) {
-    const A = codeAtlases[n.r > 24 ? 1 : 0];
+  // When more bubbles want code than an atlas holds, the biggest on screen get it (rankCode) and the
+  // rest show their shell only. A slot is only taken back from a bubble that has been off that list
+  // for a frame or more: drawing code is slow in WebKit (~3 ms a slot), so slots must not churn.
+  let texBudget = 0, codeFrame = 0, codeDraws = 0, codeMs = 0;
+  const codeCand = [[], []];
+  const atlasOf = (n) => codeAtlases[n.r > 24 ? 1 : 0];
+  function rankCode(order) {
+    codeFrame++;
+    codeCand[0].length = codeCand[1].length = 0;
+    for (const n of order) {
+      const p = proj[n.i], R = n.r * n.bs * sizeScale * p.s;
+      p.cr = 0;
+      if (R <= 9 || n.mb >= 0.68) continue;
+      p.cr = atlasOf(n).slots.has(n.id) ? R * 1.3 : R;   // a bubble that has its code keeps it through near-ties
+      codeCand[n.r > 24 ? 1 : 0].push(p.cr);
+    }
+    codeAtlases.forEach((A, i) => {
+      const c = codeCand[i], cap = A.per * A.per;
+      A.cut = 0;
+      if (c.length > cap) { c.sort((a, b) => b - a); A.cut = c[cap - 1]; }
+    });
+  }
+  function codeSlot(n, p) {
+    const A = atlasOf(n), want = p.cr >= A.cut;
     let s = A.slots.get(n.id);
-    if (s && s.hash === n.hash && s.color === n.color) { A.slots.delete(n.id); A.slots.set(n.id, s); return s; }
-    if (texBudget-- <= 0) return s || null;
+    if (s && s.hash === n.hash && s.color === n.color) {
+      if (want) { s.used = codeFrame; A.slots.delete(n.id); A.slots.set(n.id, s); }
+      return s;
+    }
+    if (!want || texBudget <= 0) return s || null;
     let slot = s ? s.slot : A.free.length ? A.free.pop() : null;
-    if (slot === null) { const oldest = A.slots.keys().next().value; slot = A.slots.get(oldest).slot; A.slots.delete(oldest); }
-    const x = (slot % A.per) * A.cell, y = Math.floor(slot / A.per) * A.cell;
+    if (slot === null) {
+      const oldest = A.slots.keys().next().value, o = A.slots.get(oldest);
+      if (o.used >= codeFrame - 1) return null;          // every slot is still on screen
+      slot = o.slot; A.slots.delete(oldest);
+    }
+    const x = (slot % A.per) * A.cell, y = Math.floor(slot / A.per) * A.cell, t0 = performance.now();
     gl.bindTexture(gl.TEXTURE_2D, A.tex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, x, y, gl.RGBA, gl.UNSIGNED_BYTE, renderCode(n, A.cell));
-    s = { slot, hash: n.hash, color: n.color, mode: A.mode,
+    const ms = performance.now() - t0;
+    texBudget -= ms; codeMs += ms; codeDraws++;
+    s = { slot, hash: n.hash, color: n.color, mode: A.mode, used: codeFrame,
           u0: x / ATLAS, v0: y / ATLAS, u1: (x + A.cell) / ATLAS, v1: (y + A.cell) / ATLAS };
     A.slots.delete(n.id); A.slots.set(n.id, s);
     return s;
@@ -1737,7 +1892,7 @@
     if (fp && fp.vis) { const v = parseInt(f.color.slice(1), 16); set(2, fp.sx, fp.sy, 50, Math.max(80, (fp.R || 20) * 9), [(v >> 16) / 255, ((v >> 8) & 255) / 255, (v & 255) / 255], selected ? 1.6 + 0.3 * Math.sin(T * 3) : 0.9); }
     else set(2, 0, 0, 1, 1, [0, 0, 0], 0);
     const SL = storm.light;
-    if (SL && SL.i * 1.1 > noteLight.v * 1.6) set(3, SL.x, SL.y, 420, Math.max(W, H) * 0.8, [0.72, 0.78, 1], SL.i * 1.1);
+    if (SL && SL.i * 0.3 > noteLight.v * 1.6) set(3, SL.x, SL.y, 420, Math.max(W, H) * 0.7, [0.72, 0.78, 1], SL.i * 0.3);
     else set(3, W * (0.5 + noteLight.pan * 0.4), H * 0.4, 260, Math.max(W, H) * 0.45, [1, 0.86, 0.7], noteLight.v * 1.6);
   }
 
@@ -1763,22 +1918,19 @@
     return m;
   }
 
-  function nodeState(n) {
-    // returns [alpha, ring colour or null]
-    if (!visible(n)) return [0, null];
-    if (selected) {
-      if (n === selected) return [1, "#ffffff"];
-      if (treeMode && treeSet) return treeSet.has(n) ? [Math.max(0.45, 1 - treeSet.get(n) * 0.12), null] : [0.06, null];
-      if (selected.outSet.has(n)) return [1, "#4ff3ff"];
-      if (selected.incSet.has(n)) return [1, "#ff5fd2"];
-      return [0.08, null];
-    }
-    if (matchSet) return matchSet.has(n) ? [1, "#ffe14f"] : [0.12, null];
-    if (hovered) {
-      if (n === hovered || hovered.outSet.has(n) || hovered.incSet.has(n)) return [1, null];
-      return [0.35, null];
-    }
-    return [0.95, null];
+  function nodeState(n, p) {
+    // sets p.a (alpha) and p.ring (ring colour or null); written in place, it runs for every bubble every frame
+    let a = 0.95, ring = null;
+    if (!visible(n)) a = 0;
+    else if (selected) {
+      if (n === selected) { a = 1; ring = "#ffffff"; }
+      else if (treeMode && treeSet) a = treeSet.has(n) ? Math.max(0.45, 1 - treeSet.get(n) * 0.12) : 0.06;
+      else if (selected.outSet.has(n)) { a = 1; ring = "#4ff3ff"; }
+      else if (selected.incSet.has(n)) { a = 1; ring = "#ff5fd2"; }
+      else a = 0.08;
+    } else if (matchSet) { if (matchSet.has(n)) { a = 1; ring = "#ffe14f"; } else a = 0.12; }
+    else if (hovered) a = n === hovered || hovered.outSet.has(n) || hovered.incSet.has(n) ? 1 : 0.35;
+    p.a = a; p.ring = ring;
   }
 
   // strand class: 0 normal, 1 faint, 2 hot (depends-on, cyan), 3 hot (used-by, pink)
@@ -1815,29 +1967,81 @@
   const STRAND_STYLE = [[1.8, 0.15], [1.4, 0.035], [3.0, 0.7], [3.0, 0.7]];
   const hotDep = [], hotUser = [];
   let strandK = 1;   // the plain strands fade back in the tree and the city, where the scenery speaks instead
+  // a strand's colour into cr/cg/cb/ca; returns its class, or -1 while it isn't drawn
+  function strandColor(l) {
+    if (!visible(l.s) || !visible(l.t)) return -1;
+    const cls = strandClass(l), a = STRAND_STYLE[cls][1], bl = Math.min(l.s.bl, l.t.bl);
+    if (bl <= 0.01) return -1;
+    if (cls === 2) setColor("#4ff3ff", a * bl);
+    else if (cls === 3) setColor("#ff5fd2", a * bl);
+    else setColor(l.s.color, (cls === 0 && matchSet ? 0.3 : a) * bl * strandK);
+    return cls;
+  }
+  // strand i's rope on screen, into SX/SY; false if part of it is behind the camera
+  function projStrand(i) {
+    const tx = cam.tx, ty = cam.ty, tz = cam.tz, dist = cam.dist, cx0 = W / 2, cy0 = H / 2, o = i * NP;
+    for (let k = 0, j = o * 3; k < NP; k++, j += 3) {   // inlined project()
+      const dx = SP[j] - tx, dy = SP[j + 1] - ty, dz = SP[j + 2] - tz;
+      const x1 = dx * cy - dz * sy, z1 = dx * sy + dz * cy;
+      const y2 = dy * cp - z1 * sp, depth = dist - (dy * sp + z1 * cp);
+      if (depth < 10) return false;
+      const s = F / depth;
+      SX[o + k] = cx0 + x1 * s; SY[o + k] = cy0 - y2 * s;
+    }
+    return true;
+  }
+  const instanced = gl.getExtension("ANGLE_instanced_arrays");
+  const strandProgs = {}, strandPts = gl.createBuffer(), strandVBO = gl.createBuffer();
+  let strandStyle = null;   // per strand: half width (float) and colour (4 bytes)
+  function strandProgram(np, steps) {
+    if (!instanced) return null;
+    let G = strandProgs[np * 10 + steps];
+    if (G) return G;
+    const segs = (np - 2) * steps + 1, mesh = new Float32Array(segs * 12);
+    for (let j = 0; j < segs; j++) mesh.set([j, 0, 1, j, 0, -1, j, 1, 1, j, 1, -1], j * 12);
+    const prog = program(`#define NP ${np}\n#define STEPS ${steps}\n` + SCREEN_VS + STRAND_VS, LINE_FS, "a_seg");
+    G = strandProgs[np * 10 + steps] = { prog, segs, mesh: gl.createBuffer(), pts: Array.from({ length: np }, (_, k) => prog.loc["a_p" + k]) };
+    gl.bindBuffer(gl.ARRAY_BUFFER, G.mesh); gl.bufferData(gl.ARRAY_BUFFER, mesh, gl.STATIC_DRAW);
+    return G;
+  }
   function drawStrands() {
     hotDep.length = 0; hotUser.length = 0;
-    const STEPS = strands.length > 2000 ? 2 : 3;
-    const tx = cam.tx, ty = cam.ty, tz = cam.tz, dist = cam.dist, cx0 = W / 2, cy0 = H / 2;
+    const N = strands.length, STEPS = N > 2000 ? 2 : 3, G = N && strandProgram(NP, STEPS);
+    if (!G) { drawStrandsCPU(STEPS); return; }
+    if (!strandStyle || strandStyle.f32.length < N * 2) { const b = new ArrayBuffer(N * 8); strandStyle = { f32: new Float32Array(b), u8: new Uint8Array(b) }; }
+    const f = strandStyle.f32, u = strandStyle.u8;
+    for (let i = 0; i < N; i++) {
+      let cls = strandColor(strands[i].l);
+      if (cls >= 2) { if (projStrand(i)) (cls === 2 ? hotDep : hotUser).push(i); else cls = -1; }   // the pulses ride these on screen
+      const b = i * 8;
+      f[i * 2] = cls < 0 ? 0 : cls === 1 ? -STRAND_STYLE[1][0] : STRAND_STYLE[cls][0];
+      u[b + 4] = cr; u[b + 5] = cg; u[b + 6] = cb; u[b + 7] = cls < 0 ? 0 : ca;
+    }
+    const P = G.prog, L = P.loc;
+    gl.useProgram(P.p);
+    gl.uniform2f(L.u_res, W, H); gl.uniform3f(L.u_camT, cam.tx, cam.ty, cam.tz);
+    gl.uniform4f(L.u_rot, cy, sy, cp, sp); gl.uniform2f(L.u_df, cam.dist, F);
+    gl.bindBuffer(gl.ARRAY_BUFFER, G.mesh);
+    gl.enableVertexAttribArray(L.a_seg); gl.vertexAttribPointer(L.a_seg, 3, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, strandPts);
+    gl.bufferData(gl.ARRAY_BUFFER, SP, gl.STREAM_DRAW);
+    G.pts.forEach((a, k) => { gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 3, gl.FLOAT, false, NP * 12, k * 12); instanced.vertexAttribDivisorANGLE(a, 1); });
+    gl.bindBuffer(gl.ARRAY_BUFFER, strandVBO);
+    gl.bufferData(gl.ARRAY_BUFFER, u.subarray(0, N * 8), gl.STREAM_DRAW);
+    gl.enableVertexAttribArray(L.a_hw); gl.vertexAttribPointer(L.a_hw, 1, gl.FLOAT, false, 8, 0); instanced.vertexAttribDivisorANGLE(L.a_hw, 1);
+    gl.enableVertexAttribArray(L.a_col); gl.vertexAttribPointer(L.a_col, 4, gl.UNSIGNED_BYTE, true, 8, 4); instanced.vertexAttribDivisorANGLE(L.a_col, 1);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quadIndex);
+    instanced.drawElementsInstancedANGLE(gl.TRIANGLES, G.segs * 6, gl.UNSIGNED_SHORT, 0, N);
+    for (const a of [...G.pts, L.a_hw, L.a_col]) { instanced.vertexAttribDivisorANGLE(a, 0); gl.disableVertexAttribArray(a); }
+    gl.disableVertexAttribArray(L.a_seg);
+  }
+  // without instancing: every segment built here, into the line batch
+  function drawStrandsCPU(STEPS) {
     for (let i = 0; i < strands.length; i++) {
-      const l = strands[i].l;
-      if (!visible(l.s) || !visible(l.t)) continue;
-      const o3 = i * NP * 3, o = i * NP;
-      let ok = true;
-      for (let k = 0, j = o3; k < NP; k++, j += 3) {   // inlined project()
-        const dx = SP[j] - tx, dy = SP[j + 1] - ty, dz = SP[j + 2] - tz;
-        const x1 = dx * cy - dz * sy, z1 = dx * sy + dz * cy;
-        const y2 = dy * cp - z1 * sp, depth = dist - (dy * sp + z1 * cp);
-        if (depth < 10) { ok = false; break; }
-        const s = F / depth;
-        SX[o + k] = cx0 + x1 * s; SY[o + k] = cy0 - y2 * s;
-      }
-      if (!ok) continue;
-      const cls = strandClass(l), style = STRAND_STYLE[cls], hw = style[0], bl = Math.min(l.s.bl, l.t.bl);
-      if (bl <= 0.01) continue;
-      if (cls === 2) { setColor("#4ff3ff", style[1] * bl); hotDep.push(i); }
-      else if (cls === 3) { setColor("#ff5fd2", style[1] * bl); hotUser.push(i); }
-      else setColor(l.s.color, (cls === 0 && matchSet ? 0.3 : style[1]) * bl * strandK);
+      const cls = strandColor(strands[i].l);
+      if (cls < 0 || !projStrand(i)) continue;
+      if (cls === 2) hotDep.push(i); else if (cls === 3) hotUser.push(i);
+      const hw = STRAND_STYLE[cls][0], o = i * NP;
       if (cls === 1) {   // dimmed background strands: a straight polyline is plenty
         for (let k = 0; k < NP - 1; k++) lineSeg(SX[o + k], SY[o + k], SX[o + k + 1], SY[o + k + 1], hw);
         continue;
@@ -1940,7 +2144,7 @@
     p.fn = FACES.length;
     p.bx0 = x0; p.by0 = y0; p.bx1 = x1; p.by1 = y1; p.boxR = Math.max(x1 - x0, y1 - y0) / 2;
   }
-  const BOX_TINT = [4, 6, 12];
+  const BOX_TINT = [4, 6, 12], DISTRICT_TINT = [6, 12, 22];
   function drawBox(n, p) {
     const a = sstep(0, 0.45, n.mb) * Math.min(1, n.bl * 2.5);
     if (a <= 0.01 || !p.fn) return;
@@ -1971,7 +2175,7 @@
     for (const r of cityOrder) {
       if (!boxFaces(r.x0 * spacing, cityTop(r.y0, rise), r.z0 * spacing, r.x1 * spacing, cityTop(r.y1, rise), r.z1 * spacing)) continue;
       const rgb = hexRGB(r.d.color), k = 0.1 + 0.035 * Math.min(4, r.depth);
-      for (let f = 0; f < FACES.length; f++) { shade(rgb, k * FSH[f], [6, 12, 22]); faceQuad(FACES[f], 0, FACES[f] === F_ROOF ? 9 : 8); }
+      for (let f = 0; f < FACES.length; f++) { shade(rgb, k * FSH[f], DISTRICT_TINT); faceQuad(FACES[f], 0, FACES[f] === F_ROOF ? 9 : 8); }
     }
     flush(quads);
   }
@@ -2118,7 +2322,7 @@
     if (Math.abs(storm.level - storm.sent) > 0.01 && T - storm.sentAt > 0.5) { SFX.storm(storm.level); storm.sent = storm.level; storm.sentAt = T; }
     if (storm.on && storm.level > 0.05 && T > storm.nextFlash && nodes.length && !document.hidden) {
       lightning();
-      storm.nextFlash = T + rand(lerp(80, 14, storm.level), lerp(140, 36, storm.level));
+      storm.nextFlash = T + rand(lerp(90, 28, storm.level), lerp(150, 70, storm.level));
     }
     let best = null, bi = 0;
     for (const fl of storm.flashes) { const i = flashI(fl) * fl.power; if (i > bi) { bi = i; best = fl; } }
@@ -2136,7 +2340,7 @@
   function lightning(level = storm.level) {
     const dist = 0.25 + 0.75 * clamp01(1.08 - level * 0.62 + rand(-0.12, 0.12));   // 0.25 close … 1 far away
     // mostly the flash stays inside a cloud somewhere far off: a few strokes, each lighting another part of it
-    const fx = rand(0.06, 0.94), fy = rand(-0.1, 0.5) + dist * 0.08, power = (1.3 - dist) * rand(0.6, 1);
+    const fx = Math.random() < 0.5 ? rand(0.03, 0.32) : rand(0.68, 0.97), fy = rand(-0.12, 0.3) + dist * 0.06, power = (1.3 - dist) * rand(0.6, 1);
     const spread = rand(0.03, 0.09) * (1.3 - dist);
     const strokes = [{ t: 0, a: 1, ox: 0, oy: 0 }];
     let t = 0;
@@ -2146,15 +2350,15 @@
     }
     const fl = { t0: T, fx, fy, r: rand(0.3, 0.5), cloud: rand(0.12, 0.24) * (1.25 - 0.5 * dist), seed: rand(0, 90), power, dist, strokes, end: t + 1.8 };
     storm.flashes.push(fl);
-    if (dist < 0.6 && Math.random() < 0.08 + 0.3 * level) storm.bolts.push(makeBolt(fl));      // a bolt is the rare one
+    if (dist < 0.55 && Math.random() < 0.04 + 0.12 * level) storm.bolts.push(makeBolt(fl));     // a bolt is the rare one
     if (dist < 0.9 || Math.random() < 0.5)                                                     // the farthest flicker silently
       SFX.thunder({ delay: 0.35 + dist * rand(6, 9.5), dist, power, pan: fx * 2 - 1 });
   }
   function flashI(fl) {   // the flicker: a few strokes, each a fast decay, then a dim afterglow
     const age = T - fl.t0;
     let v = 0;
-    for (const s of fl.strokes) { const a = age - s.t; if (a >= 0) v += s.a * Math.exp(-a / 0.065); }
-    return v + 0.12 * Math.exp(-Math.max(0, age) / 0.5);
+    for (const s of fl.strokes) { const a = age - s.t; if (a >= 0) v += s.a * (1 - Math.exp(-a / 0.035)) * Math.exp(-a / 0.16); }   // a soft swell, not a strobe
+    return v + 0.06 * Math.exp(-Math.max(0, age) / 0.9);
   }
   function makeBolt(fl) {   // a jagged path down from above the frame, with a few short forks (screen fractions)
     const paths = [];
@@ -2178,9 +2382,43 @@
     crack(x0, -0.04, x0 + rand(-0.1, 0.1), fl.fy + rand(0.22, 0.42), 0, 1);
     return { fl, paths };
   }
+  // An easter egg among the motes: two tiny Claude Code robots drift up through the void with the
+  // confetti. Painted once into the sprite atlas's 16th cell (the palette has 15 colours, so no group
+  // ever takes it), drawn in the far layer with the motes.
+  const moteBots = [0, 1].map(() => ({ x: rand(-900, 900), y: rand(-650, 650), z: rand(-900, 900), v: rand(0.05, 0.11), ph: rand(0, 6.28) }));
+  let botCell = null;
+  function robotCell() {
+    const g = sprAtlas.canvas.getContext("2d"), x = 7 * SPR, y = SPR, px = 12;
+    const ox = x + (SPR - 18 * px) / 2, oy = y + (SPR - 16 * px) / 2;
+    const R = (cx, cy, w, h, c) => { g.fillStyle = c; g.fillRect(ox + cx * px, oy + cy * px, w * px, h * px); };
+    g.clearRect(x, y, SPR, SPR);
+    R(7.5, 11, 3, 2, "#ffd28c"); R(8, 13, 2, 2, "#ff9a3d");                    // thruster
+    R(4, 2, 10, 7, "#d97757"); R(2, 5, 2, 2, "#d97757"); R(14, 5, 2, 2, "#d97757");
+    for (const lx of [5, 7, 10, 12]) R(lx, 9, 1, 2, "#d97757");
+    R(4, 2, 10, 1, "#ec9a7f"); R(4, 8, 10, 1, "#b65a3f");
+    R(6, 4, 1, 2, "#1a0f0c"); R(11, 4, 1, 2, "#1a0f0c");                       // eyes
+    gl.bindTexture(gl.TEXTURE_2D, sprAtlas.tex);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, sprAtlas.canvas);
+    return { u0: x / 2048, v0: y / 512, u1: (x + SPR) / 2048, v1: (y + SPR) / 512 };
+  }
+  function drawMoteBots() {
+    if (!botCell) botCell = robotCell();
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    for (const b of moteBots) {
+      b.y += b.v; if (b.y > 700) b.y = -700;
+      project((b.x + Math.sin(T * 0.3 + b.ph) * 30) * LS, b.y * LS, b.z * LS, tmp);
+      if (!tmp.vis) continue;
+      const h = Math.max(7, 26 * tmp.s * LS), bob = Math.sin(T * 2 + b.ph) * 2;   // the robot fills 3/4 of its cell
+      setColor("#ffffff", 0.85 * Math.min(1, tmp.s * 2.2) * (0.8 + 0.2 * Math.sin(T * 1.3 + b.ph)));
+      quad(tmp.sx - h / 2, tmp.sy - h / 2 + bob, tmp.sx + h / 2, tmp.sy + h / 2 + bob, botCell.u0, botCell.v0, botCell.u1, botCell.v1, 3);
+    }
+    flush(quads);
+    gl.blendFunc(gl.ONE, gl.ONE);
+  }
   function drawBolts() {   // additive, behind the bubbles: a soft halo and a hair-thin core
+    drawMoteBots();        // (the far layer: the motes' robots first)
     for (const b of storm.bolts) {
-      const I = flashI(b.fl) * (1.15 - b.fl.dist) * 0.5;
+      const I = flashI(b.fl) * (1.15 - b.fl.dist) * 0.22;
       if (I < 0.01) continue;
       for (const p of b.paths) for (const [hw, al, col] of [[5 * p.w + 1, 0.08, "#8f9cff"], [0.9 * p.w + 0.35, 0.8, "#eef0ff"]]) {
         setColor(col, Math.min(1, I * al));
@@ -2272,7 +2510,10 @@
       if (hold && !bolt) { for (let t = 0.05; t < hold; t += 0.05) fl.strokes.push({ t, a: 1, ox: rand(-0.05, 0.05), oy: rand(-0.03, 0.03) }); fl.end = hold + 1.8; }
       else if (hold) { for (let t = 0.05; t < hold; t += 0.05) fl.strokes.push({ t, a: 1, ox: rand(-0.05, 0.05), oy: rand(-0.03, 0.03) }); fl.end = hold + 1.8; if (!storm.bolts.some((b) => b.fl === fl)) storm.bolts.push(makeBolt(fl)); }
     },
-    mode: (m) => setMode(m), get state() { return { mode, morph: !!morph, storm: { ...storm, flashes: storm.flashes.length, bolts: storm.bolts.length } }; } };
+    mode: (m) => setMode(m), refill: () => resetAtlases(),   // refill: redraw every bubble's code (to time it)
+    get state() { return { mode, morph: !!morph, storm: { ...storm, flashes: storm.flashes.length, bolts: storm.bolts.length } }; },
+    // for benchmarks: the frame's JS time and its stages (ms, smoothed), the GL size and what's on screen
+    get perf() { return { js: jsMs, prof: { ...prof }, gl: [glCanvas.width, glCanvas.height], nodes: nodes.length, links: links.length, strands: strands.length, codeDraws, codeMs, loading: !nodes.length || !!bloom, morph: !!morph, alpha }; } };
   function adaptQuality(raw) {
     if (raw > 250) return; // the window was hidden or the machine stalled
     emaMs += (Math.min(raw, 100) - emaMs) * 0.05;
@@ -2296,15 +2537,17 @@
   }
 
   let jsMs = 0;
-  const prof = { tick: 0, world: 0, strands: 0, atm: 0, lines: 0, bubbles: 0, overlay: 0 };
+  const prof = { tick: 0, world: 0, strands: 0, proj: 0, atm: 0, lines: 0, bubbles: 0, overlay: 0 };
   let profAt = 0;
   const mark2 = (k) => { if (!showFps) return; const t = performance.now(); prof[k] += (t - profAt - prof[k]) * 0.05; profAt = t; };
+  const order = [], farFirst = (a, b) => proj[b.i].depth - proj[a.i].depth;   // the bubbles on screen, back to front
   function frame(now) {
     const t0 = performance.now(); profAt = t0;
     const raw = now - last;
     const dt = Math.min(0.05, raw / 1000); last = now; T += dt;
     adaptQuality(raw);
-    tick(); mark2("tick");
+    if (mode === "cloud") tick();   // the force layout only shapes the cloud: it waits while another view is up
+    mark2("tick");
     updateWorld(); updateModeW(); stormStep(dt); mark2("world");
     GRAV = lerp(-0.01, 0.045, modeW.city);
     strandK = modeW.cloud + 0.12 * modeW.tree + 0.07 * modeW.city;
@@ -2326,19 +2569,22 @@
     cam.tx += (goal.tx - cam.tx) * e; cam.ty += (goal.ty - cam.ty) * e; cam.tz += (goal.tz - cam.tz) * e;
     cy = Math.cos(cam.yaw); sy = Math.sin(cam.yaw); cp = Math.cos(cam.pitch); sp = Math.sin(cam.pitch);
     listen(dt);
+    order.length = 0;
     for (const n of nodes) {
-      project(n.wx, n.wy, n.wz, proj[n.i]);
-      const st = nodeState(n); proj[n.i].a = st[0]; proj[n.i].ring = st[1];
+      const p = proj[n.i];
+      project(n.wx, n.wy, n.wz, p);
+      nodeState(n, p);
+      if (p.vis && p.a > 0) order.push(n);
     }
     updateLight(dt);
-    const order = nodes.filter((n) => proj[n.i].vis && proj[n.i].a > 0).sort((a, b) => proj[b.i].depth - proj[a.i].depth);
+    order.sort(farFirst);
     camPos();
     for (const n of order) { if (n.mb > 0.01 && n.lc) prepBox(n, proj[n.i]); else proj[n.i].fn = 0; }
     gl.useProgram(spriteProg.p);
     gl.uniform4fv(spriteProg.loc["u_lpos[0]"], LPOS); gl.uniform4fv(spriteProg.loc["u_lcol[0]"], LCOL);
 
     // ---- WebGL: atmosphere, background, additive light (confetti, floor, strands, pulses), bubbles, front fog ----
-    mark2("world");
+    mark2("proj");
     drawAtmosphere(order); mark2("atm");
     gl.disable(gl.BLEND);
     drawBackground();
@@ -2369,7 +2615,8 @@
     // bubbles, back to front: dark core, wrapped code, glassy shell, then the light on it
     // (in the city, its building: the bubble melts into it as it lands)
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    texBudget = 3;
+    texBudget = 2.5;   // ms of code drawing per frame (at least one slot)
+    rankCode(order);
     for (const n of order) {
       const p = proj[n.i];
       if (p.fn) drawBox(n, p);
@@ -2383,7 +2630,7 @@
       setColor("#07051a", fade * 0.6);
       quad(x - R * 0.97, y - R * 0.97, x + R * 0.97, y + R * 0.97, 0, 0, 1, 1, 0);
       if (R > 9) {
-        const s = codeSlot(n);
+        const s = codeSlot(n, p);
         if (s) { setColor("#ffffff", fade * 0.95); quad(x - R, y - R, x + R, y + R, s.u0, s.v0, s.u1, s.v1, s.mode); }
       }
       const c = spriteCell(n.color), h = R * (SPR / BODY) / 2;
@@ -2429,16 +2676,15 @@
 
     placeLabels();
     // labels: small ones for context, name cards for the biggest, full cards for the focus
-    const full = new Set([selected, hovered].filter(Boolean));
     for (const n of order) {
       const p = proj[n.i];
-      if (full.has(n) || p.a < 0.3 || n.bl < 1) continue;
+      if (n === selected || n === hovered || p.a < 0.3 || n.bl < 1) continue;
       const neighbour = (selected && (treeMode && treeSet ? treeSet.has(n) : p.ring)) ||
                         (hovered && (hovered.outSet.has(n) || hovered.incSet.has(n))) || (matchSet && matchSet.has(n));
       if (bigNodes.has(n) && !selected && !matchSet && !hovered) drawTag(n, p, false);
       else if (allLabels || neighbour) drawSmallLabel(n, p);
     }
-    for (const n of order) if (full.has(n)) drawTag(n, proj[n.i], true);
+    for (const n of order) if (n === selected || n === hovered) drawTag(n, proj[n.i], true);
 
     mark2("overlay");
     jsMs += (performance.now() - t0 - jsMs) * 0.05;
@@ -2630,6 +2876,130 @@
   $("tStorm").setAttribute("aria-pressed", storm.on);
   toggle($("tStorm"), (v) => { storm.on = v; try { localStorage.setItem("coderoom.storm", v ? "on" : "off"); } catch (_) {} });
 
+  // ---------- the hidden debug menu (the bug in the corner, or B) ----------
+  // Fire any of the room's events on demand: a storm, lightning and thunder, a melody, the radio, a bloom.
+  function stormNow(lv) {
+    if (lv && !storm.on) { storm.on = true; $("tStorm").setAttribute("aria-pressed", true); }
+    storm.phase = lv ? "peak" : "calm"; storm.peak = lv; storm.start = T; storm.until = T + (lv ? 300 : 600); storm.nextFlash = T + 1.5;
+  }
+  function flashNow(bolt) {
+    lightning(Math.max(0.7, storm.level));
+    const fl = storm.flashes[storm.flashes.length - 1];
+    storm.bolts = storm.bolts.filter((b) => b.fl !== fl);
+    if (bolt) storm.bolts.push(makeBolt(fl));
+  }
+  const DEBUG = [
+    ["Storm", [
+      ["Bring a storm", () => stormNow(0.9)], ["Calm it", () => stormNow(0)],
+      ["Cloud flash", () => flashNow(false)], ["Bolt", () => flashNow(true)],
+      ["Thunder near", () => SFX.thunder({ delay: 0.15, dist: 0.3, power: 1, pan: rand(-0.6, 0.6) })],
+      ["Thunder far", () => SFX.thunder({ delay: 0.15, dist: 0.95, power: 0.6, pan: rand(-0.7, 0.7) })],
+    ]],
+    ["Music", [
+      ["Piano", () => SFX.phrase("piano")], ["Violin", () => SFX.phrase("violin")], ["Flute", () => SFX.phrase("flute")],
+      ["Aria", () => SFX.play("aria")], ["Keygen track", () => SFX.keygen()], ["Any track", () => SFX.play()], ["Stop radio", () => SFX.stopRadio()],
+    ]],
+    ["Room", [
+      ["Bloom", () => { const cues = startBloom(); if (cues) SFX.boot({ modules: nodes.length, bloom: cues }); }],
+      ["Beat", () => onBeat(1)], ["Robot", () => robotSummon()],
+      ["Next view", () => setMode(MODES[(MODES.indexOf(mode) + 1) % MODES.length])],
+      ["FPS", () => { showFps = !showFps; $("fps").textContent = ""; }],
+    ]],
+  ];
+  const dbgMenu = $("dbgMenu"), bugBtn = $("bugBtn");
+  dbgMenu.innerHTML = `<div class="title">DEBUG <small>B to toggle</small></div>` +
+    DEBUG.map(([h, items], i) => `<h4>${h}</h4><div class="row">${items.map(([label], k) => `<button data-a="${i}.${k}">${esc(label)}</button>`).join("")}</div>`).join("") +
+    `<div class="status" id="dbgStatus"></div>`;
+  dbgMenu.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-a]");
+    if (!b) return;
+    const [i, k] = b.dataset.a.split(".").map(Number);
+    SFX.start(); SFX.ui(true);
+    DEBUG[i][1][k][1]();
+    dbgStatus();
+  });
+  let dbgTimer = 0;
+  function dbgStatus() {
+    const next = storm.level > 0.05 ? `next flash in ${Math.max(0, storm.nextFlash - T) | 0} s` : `${storm.phase} for ${Math.max(0, storm.until - T) | 0} s more`;
+    $("dbgStatus").textContent = `storm: ${storm.on ? storm.phase : "off"} · ${Math.round(storm.level * 100)}% · ${next}\n` +
+      `view: ${mode} · robot ${bot.on ? "is here" : `in ${Math.max(0, bot.next - performance.now() / 1000) / 60 | 0} min`}\n` +
+      `radio: ${SFX.nowPlaying || "quiet"} · audio ${SFX.state}`;
+  }
+  function setDebug(open) {
+    dbgMenu.hidden = !open; bugBtn.setAttribute("aria-expanded", open);
+    clearInterval(dbgTimer);
+    if (open) { dbgStatus(); dbgTimer = setInterval(dbgStatus, 500); }
+  }
+  bugBtn.onclick = (e) => { e.stopPropagation(); setDebug(dbgMenu.hidden); SFX.ui(!dbgMenu.hidden); };
+  document.addEventListener("pointerdown", (e) => { if (!dbgMenu.hidden && !dbgMenu.contains(e.target) && !bugBtn.contains(e.target)) setDebug(false); });
+
+  // ---------- the easter egg: a little Claude Code robot ----------
+  // Every ten minutes or so it drifts in from one side on a tiny thruster, hovers to wave and say something
+  // about the room, then flies off the other way. Click it and it hops.
+  const bot = { el: $("robot"), svg: $("robotBot"), say: $("robotSay"), on: false, next: performance.now() / 1000 + rand(540, 720), t0: 0, raf: 0 };
+  const ease3 = (q) => 1 - Math.pow(1 - q, 3), easeIn3 = (q) => q * q * q;
+  function robotLines() {
+    const big = nodes.reduce((b, n) => (!b || n.funcs > b.funcs ? n : b), null);
+    return [
+      "✻ Clauding…", `✻ Spelunking through ${repoName || "the void"}…`, "✻ Percolating…", "✻ Reticulating splines…",
+      nodes.length ? `${nodes.length.toLocaleString()} modules. Nice room.` : "Hello, void.",
+      big ? `${big.name} has ${big.funcs} functions 👀` : "beep boop",
+      "All tests pass ✓ (probably)", "> /review the void", "Just passing through ✻", "I like what you did with the strands.",
+      mode === "city" ? "Nice skyline." : mode === "tree" ? "Your tree is growing!" : "So many bubbles…",
+      storm.level > 0.2 ? "Storm's coming. Commit your work!" : "Hi! 👋",
+    ];
+  }
+  function robotSay(text, ms = 3600) {
+    bot.say.textContent = text; bot.say.classList.add("show");
+    clearTimeout(bot.sayT); bot.sayT = setTimeout(() => bot.say.classList.remove("show"), ms);
+  }
+  function robotSummon() {
+    if (bot.on) return;
+    const dir = Math.random() < 0.5 ? 1 : -1, w = innerWidth, h = innerHeight;
+    Object.assign(bot, { on: true, t0: performance.now() / 1000, dir, x0: dir > 0 ? -80 : w + 20, x1: w * rand(0.3, 0.62), x2: dir > 0 ? w + 40 : -100,
+                         y0: h * rand(0.24, 0.48), said: false, waved: false });
+    bot.el.hidden = false; bot.el.classList.remove("wave", "hop");
+    SFX.robot("arrive", dir > 0 ? -0.7 : 0.7);
+    cancelAnimationFrame(bot.raf); bot.raf = requestAnimationFrame(robotFrame);
+  }
+  function robotFrame() {
+    const t = performance.now() / 1000 - bot.t0, IN = 3.4, STAY = 6.2, OUT = 3.2;
+    let x, lean = 0;
+    if (t < IN) { const q = t / IN; x = lerp(bot.x0, bot.x1, ease3(q)); lean = (1 - q) * 14; }
+    else if (t < IN + STAY) {
+      x = bot.x1 + Math.sin((t - IN) * 0.9) * 10;
+      if (!bot.waved) { bot.waved = true; bot.el.classList.add("wave"); SFX.robot("hello", panAt(x)); setTimeout(() => bot.el.classList.remove("wave"), 1900); }
+      if (!bot.said && t > IN + 0.4) { bot.said = true; const L = robotLines(); robotSay(L[(Math.random() * L.length) | 0], 4200); }
+    } else if (t < IN + STAY + OUT) {
+      const q = (t - IN - STAY) / OUT; x = lerp(bot.x1, bot.x2, easeIn3(q)); lean = q * 16;
+      if (!bot.left) { bot.left = true; SFX.robot("leave", panAt(x)); }
+    } else {
+      bot.on = false; bot.left = false; bot.el.hidden = true; bot.say.classList.remove("show");
+      bot.next = performance.now() / 1000 + rand(540, 720);
+      return;
+    }
+    const y = bot.y0 + Math.sin(t * 2.1) * 9 + Math.sin(t * 0.7) * 14;
+    bot.svg.classList.toggle("step", (t * 5.5) % 2 < 1);
+    bot.el.style.transform = `translate(${x}px, ${y}px) rotate(${(bot.dir * lean + Math.sin(t * 1.7) * 3).toFixed(2)}deg)`;
+    bot.raf = requestAnimationFrame(robotFrame);
+  }
+  const panAt = (x) => Math.max(-0.8, Math.min(0.8, (x / innerWidth) * 2 - 1));
+  bot.svg.addEventListener("click", () => {
+    bot.el.classList.remove("hop"); void bot.el.offsetWidth; bot.el.classList.add("hop");
+    robotSay(["Hey, that tickles!", "beep!", "You found me ✻", "✻ Thinking about it…", "*happy robot noises*"][(Math.random() * 5) | 0], 2600);
+    SFX.robot("boop", panAt(bot.x1));
+    for (let k = 0; k < 7; k++) {
+      const sp = document.createElement("span"), a = (k / 7) * Math.PI * 2 + rand(-0.3, 0.3), r = rand(26, 46);
+      sp.className = "spark"; sp.textContent = "✦";
+      sp.style.setProperty("--dx", `${Math.cos(a) * r}px`); sp.style.setProperty("--dy", `${Math.sin(a) * r}px`);
+      bot.el.appendChild(sp); setTimeout(() => sp.remove(), 800);
+    }
+  });
+  // it only comes round while a repository is open and the window is in view
+  setInterval(() => {
+    if (!bot.on && performance.now() / 1000 > bot.next && nodes.length && !document.hidden && $("welcome").hidden) robotSummon();
+  }, 5000);
+
   // ---------- Size / Spread sliders (remembered per browser) ----------
   function loadView() { try { return JSON.parse(localStorage.getItem("coderoom.view") || "{}"); } catch (_) { return {}; } }
   function saveView() { try { localStorage.setItem("coderoom.view", JSON.stringify({ size: sizeScale, spread: spacing })); } catch (_) {} }
@@ -2724,7 +3094,7 @@
   q.addEventListener("blur", () => setTimeout(() => results.classList.remove("open"), 100));
   window.addEventListener("keydown", (e) => {
     if (e.target.closest && e.target.closest("input, textarea")) return;
-    if (e.key === "Escape") { $("repoMenu").hidden = true; $("browser").hidden = true; select(null); }
+    if (e.key === "Escape") { $("repoMenu").hidden = true; $("browser").hidden = true; setDebug(false); select(null); }
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.key === "/") { e.preventDefault(); q.focus(); }
     if (e.key === "u" || e.key === "U") rescan();
@@ -2732,6 +3102,7 @@
     if (e.key === "o" || e.key === "O") { e.preventDefault(); $("repoBtn").click(); }
     if (e.key >= "1" && e.key <= "3") setMode(MODES[+e.key - 1]);
     if (e.key === "v" || e.key === "V") setMode(MODES[(MODES.indexOf(mode) + 1) % MODES.length]);
+    if (e.key === "b" || e.key === "B") { setDebug(dbgMenu.hidden); SFX.ui(!dbgMenu.hidden); }
   });
 
   // ---------- boot: ?root=…, else the last repository, else the welcome screen ----------

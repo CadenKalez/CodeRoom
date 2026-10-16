@@ -35,7 +35,7 @@
 
   let ctx = null, master, dry, revIn, delIn, echoIn, wave, white, pink;
   let groups = {}, meters = {};
-  const GROUP_LEVELS = { bed: 0.55, tonal: 0.55, music: 0.75, sfx: 1.6 };   // the room is a bed; interactions sit ~10 dB above it
+  const GROUP_LEVELS = { bed: 0.55, tonal: 0.55, music: 0.75, sfx: 1.6, storm: 0.9 };   // the room is a bed; interactions sit ~10 dB above it
   let enabled = true, volume = 0.7, started = false, ambientOn = false;
   let testing = false;   // an offline render is running: the live room must not schedule into it
   let pad = [], strings = [], beds = [], timers = [], windSrc = null;
@@ -83,16 +83,18 @@
     eL.connect(eMerge, 0, 0); eR.connect(eMerge, 0, 1);
     eMerge.connect(eOut); eOut.connect(master); eOut.connect(revIn);
 
-    // groups: each has a fader per send and, after it, a duck stage, so fades and ducks never fight
+    // groups: each has a fader per send, then a duck stage (held ducks: the radio, a selection), then a
+    // muffle stage (a dip and a lowpass that events pull on so they don't fight the room), so none fight
     groups = {};
     for (const [name, level] of Object.entries(GROUP_LEVELS)) {
-      const sends = [], ducks = [];
+      const sends = [], ducks = [], muffles = [];
       for (const target of [dry, revIn, delIn]) {
-        const f = ctx.createGain(), d = ctx.createGain();
+        const f = ctx.createGain(), d = ctx.createGain(), m = ctx.createGain(), lp = ctx.createBiquadFilter();
+        lp.type = "lowpass"; lp.frequency.value = 20000; lp.Q.value = 0.5;
         f.gain.value = name === "bed" || name === "tonal" ? 0 : level;            // ambience fades in when the room starts
-        f.connect(d).connect(target); sends.push(f); ducks.push(d);
+        f.connect(d).connect(m).connect(lp).connect(target); sends.push(f); ducks.push(d); muffles.push([m, lp]);
       }
-      groups[name] = { sends, ducks, level };
+      groups[name] = { sends, ducks, muffles, level };
     }
     // meters: the lighting follows the music and the whole room; the kick meter finds the beat
     meters = {};
@@ -120,6 +122,15 @@
       g.gain.cancelScheduledValues(t);
       g.gain.setTargetAtTime(dB(db), t, attack / 3);
       if (hold !== Infinity) g.gain.setTargetAtTime(1, t + attack + hold, release / 3);
+    }
+  }
+  // an event (thunder, a melody) clears room for itself: the group dips by `db` and darkens to `freq` Hz,
+  // holds, and opens again. Separate from duck(), so a held radio duck is never undone by a thunderclap.
+  function muffle(name, db, freq, attack = 0.6, hold = 2, release = 3, t = now()) {
+    for (const [m, lp] of groups[name].muffles) {
+      m.gain.cancelScheduledValues(t); lp.frequency.cancelScheduledValues(t);
+      m.gain.setTargetAtTime(dB(db), t, attack / 3); lp.frequency.setTargetAtTime(freq, t, attack / 3);
+      m.gain.setTargetAtTime(1, t + attack + hold, release / 3); lp.frequency.setTargetAtTime(20000, t + attack + hold, release / 3);
     }
   }
   function unduck(name, release = 3) {
@@ -261,7 +272,7 @@
     return { src, gain: g2, out: o };
   }
   // a sustained, looping sample at a pitch; returns a voice whose pitch can glide
-  function sustain(g, midi, { t = now(), gain = 0.1, lp = 0, group = "tonal", pan = 0, dry: d = 0.3, rev = 0.9, del = 0.1, attack = 3 } = {}) {
+  function sustain(g, midi, { t = now(), gain = 0.1, lp = 0, group = "tonal", pan = 0, dry: d = 0.3, rev = 0.9, del = 0.1, attack = 3, dest = null } = {}) {
     const list = bank.loops[g];
     if (!list || !list.length) return null;
     const s = nearest(list, midi), src = ctx.createBufferSource();
@@ -270,7 +281,7 @@
     const filt = ctx.createBiquadFilter(); filt.type = "lowpass"; filt.frequency.value = lp || 6000; filt.Q.value = 0.5;
     const amp = ctx.createGain(); amp.gain.value = 0;
     src.connect(filt).connect(amp);
-    const o = out(amp, { pan, dry: d, rev, del, group });
+    const o = dest ? (amp.connect(dest), amp) : out(amp, { pan, dry: d, rev, del, group });
     amp.gain.setTargetAtTime(gain, t, attack / 3);
     src.start(t, Math.random() * s.buf.duration);
     return {
@@ -493,7 +504,7 @@
   }
 
   function chatter(t) {   // distant data packets crossing the void
-    if (radio.playing) return;
+    if (radio.playing || now() < phraseUntil) return;
     const n = 3 + ((Math.random() * 4) | 0), l = ladder(ROOT + 36 + ((Math.random() * 5) | 0), 7), notes = [];
     for (let k = 0; k < n; k++) notes.push(l[Math.min(l.length - 1, k + ((Math.random() * 2) | 0))]);
     chip(notes, { duty: [0.125, 0.25, 0.5][(Math.random() * 3) | 0], step: rand(0.035, 0.06), hold: 0.02, decay: 0.12 },
@@ -603,12 +614,13 @@
     const water = bedLayer("water", { gain: 0.05, hp: 700, lp: 5200, seg: 14, xf: 5, dry: 0.4, rev: 0.7, del: 0.1, pan: -0.3 });
     if (water) lfo(0.021, 0.6, water.out.pan, t);
     for (const b of beds) { b.fader.gain.setTargetAtTime(b.gain, t, fade / 3); b.ensure(t + 10); }
+    thunderTake(null); thunderTake(null);                                      // two thunder takes ready before any storm
   }
 
   function gust(s, t) { s.exc.gain.setTargetAtTime(Math.random() < 0.3 ? 0 : rand(0.01, 0.07), t, rand(1.5, 4)); }
   function breathe(v, t) { v.g.gain.setTargetAtTime(Math.random() < 0.2 ? 0 : v.level * rand(0.25, 1), t, rand(4, 9)); }
   function crystal(t) {
-    if (radio.playing) return;
+    if (radio.playing || now() < phraseUntil) return;
     const l = ladder(ROOT + 36, 10);
     const count = Math.random() < 0.3 ? 2 + ((Math.random() * 2) | 0) : 1;
     let k = (Math.random() * (l.length - 3)) | 0;
@@ -677,33 +689,73 @@
     if (pick) { pick.used = performance.now(); lastThunders = [pick, ...lastThunders].slice(0, 3); }
     return pick;
   }
-  function thunderAt(t, { dist = 0.7, power = 0.6, pan = 0 } = {}) {
+  function thunderAt(t, { dist = 0.7, power = 0.6, pan = 0, echoes = true } = {}) {
     const take = thunderTake(dist < 0.5 && Math.random() < 0.6 ? "crack" : dist > 0.75 ? "roll" : null);
     if (!take) return false;
     const near = 1 - dist;                                                     // 0 far … 0.75 close
     const rate = rand(0.8, 0.95) - 0.1 * dist;
     const src = ctx.createBufferSource(); src.buffer = take.buf; src.playbackRate.value = rate;
-    const lp1 = ctx.createBiquadFilter(), lp2 = ctx.createBiquadFilter(), hp = ctx.createBiquadFilter(), body = ctx.createBiquadFilter();
+    const lp1 = ctx.createBiquadFilter(), lp2 = ctx.createBiquadFilter(), hp = ctx.createBiquadFilter(), body = ctx.createBiquadFilter(), roll = ctx.createBiquadFilter();
     lp1.type = lp2.type = "lowpass"; lp1.Q.value = lp2.Q.value = 0.5;
-    lp1.frequency.value = 260 + 1500 * Math.pow(near, 1.4); lp2.frequency.value = lp1.frequency.value * 1.4;
-    hp.type = "highpass"; hp.frequency.value = 28; hp.Q.value = 0.6;
-    body.type = "lowshelf"; body.frequency.value = 110; body.gain.value = 3 + 3 * dist;   // far thunder is mostly weight
-    const amp = ctx.createGain(), level = power * (0.1 + 0.21 * near);
+    lp1.frequency.value = 560 + 1600 * Math.pow(near, 1.3); lp2.frequency.value = lp1.frequency.value * 1.35;
+    hp.type = "highpass"; hp.frequency.value = 30; hp.Q.value = 0.6;
+    body.type = "lowshelf"; body.frequency.value = 110; body.gain.value = 2 + dist;        // weight, for speakers that have it
+    roll.type = "peaking"; roll.frequency.value = 220; roll.Q.value = 0.7; roll.gain.value = 5 + 5 * dist;   // the rumble a laptop can still play
+    const amp = ctx.createGain(), level = power * (0.18 + 0.3 * near) * (1 + 0.6 * dist);
     const len = (take.buf.duration - (take.off || 0)) / rate;
     amp.gain.setValueAtTime(0, t); amp.gain.linearRampToValueAtTime(level, t + 0.35 + 0.5 * dist);   // never a hard edge
     amp.gain.setValueAtTime(level, t + len - 3); amp.gain.linearRampToValueAtTime(0, t + len);
-    src.connect(hp).connect(lp1).connect(lp2).connect(body).connect(amp);
-    const o = out(amp, { pan: clamp(pan * 0.7, -0.7, 0.7), group: "bed", dry: 0.75 - 0.35 * dist, rev: 0.45 + 0.4 * dist, del: 0 });
+    src.connect(hp).connect(lp1).connect(lp2).connect(body).connect(roll).connect(amp);
+    const o = out(amp, { pan: clamp(pan * 0.7, -0.7, 0.7), group: "storm", dry: 0.7 - 0.3 * dist, rev: 0.5 + 0.4 * dist, del: 0 });
+    // it rolls back off far hills: later, darker and wider each time, more of it the farther the storm
+    const tails = [];
+    if (echoes) [[0.45, 0.5], [1.1, 0.38], [1.9, 0.3], [2.9, 0.22], [4.2, 0.15]].forEach(([d, g], k) => {
+      const dl = ctx.createDelay(8), f = ctx.createBiquadFilter(), gg = ctx.createGain();
+      dl.delayTime.value = d * rand(0.85, 1.2) * (0.8 + 0.4 * dist);
+      f.type = "lowpass"; f.frequency.value = lp1.frequency.value * Math.pow(0.78, k + 1); f.Q.value = 0.4;
+      gg.gain.value = g * (0.7 + 0.5 * dist);
+      amp.connect(dl).connect(f).connect(gg);
+      tails.push(dl, out(gg, { pan: clamp((k % 2 ? -1 : 1) * (0.35 + 0.12 * k) - pan * 0.2, -0.9, 0.9), group: "storm", dry: 0.55, rev: 0.75 }));
+    });
     src.start(t); src.stop(t + len + 0.1);
-    src.onended = () => o.disconnect();
+    src.onended = () => { o.disconnect(); setTimeout(() => tails.forEach((n) => n.disconnect()), 7000); };
+    // the room holds its breath while it rolls: rain, sea and wind, the pads and the music dip and darken
+    // (more for a close one), so the thunder never has to fight them
+    const hold = Math.min(len * 0.45, 9);
+    muffle("bed", -4 - 3 * near, 2200 - 900 * near, 0.6, hold, 4, t);
+    muffle("tonal", -2.5 - 3 * near, 2600 - 1800 * near, 0.8, hold, 4, t);
+    muffle("music", -1.5 - 2.5 * near, 4000 - 2400 * near, 0.8, hold, 4, t);
     // the pressure under it: a sub swell that peaks with the roll
     const peak = t + Math.min(len * 0.5, (take.peakAt || 2) / rate), sub = noise(true, t), slp = ctx.createBiquadFilter(), sg = ctx.createGain();
     slp.type = "lowpass"; slp.frequency.value = 55; slp.Q.value = 0.7;
     sg.gain.setValueAtTime(0, t); sg.gain.linearRampToValueAtTime(0.5 * level, peak); sg.gain.setTargetAtTime(0, peak + 0.2, 1.4 + dist);
     sub.connect(slp).connect(sg);
-    const so = out(sg, { pan: pan * 0.3, group: "bed", dry: 1, rev: 0.2 });
+    const so = out(sg, { pan: pan * 0.3, group: "storm", dry: 1, rev: 0.2 });
     sub.stop(peak + 9); sub.onended = () => so.disconnect();
     return true;
+  }
+  // beyond the horizon: while a storm is about, thunder rolls in now and then from flashes too far to see
+  function distantRoll(t) {
+    if (stormLevel < 0.12 || Math.random() > 0.3 + 0.45 * stormLevel) return;
+    thunderAt(t + rand(0, 3), { dist: rand(0.88, 1), power: rand(0.4, 0.7) * (0.6 + 0.4 * stormLevel), pan: rand(-0.85, 0.85) });
+  }
+
+  // ---------- the robot's voice: a few chip blips (it's a little computer) ----------
+  function robotVoice(kind, pan = 0) {
+    const t = now() + 0.02;
+    if (kind === "arrive") {
+      whoosh(t, 260, 1400, 1.6, 0.008, pan, 1.6);                              // the tiny thruster
+      chip([ROOT + 36, ROOT + 43], { duty: 0.25, step: 0.07, hold: 0.04, decay: 0.12 }, { t: t + 0.3, gain: 0.016, pan, rev: 0.5, del: 0.3, echo: 0.2 });
+    } else if (kind === "hello") {
+      chip([ROOT + 36, ROOT + 40, ROOT + 43, ROOT + 48], { duty: 0.25, step: 0.085, hold: 0.06, decay: 0.22 }, { t, gain: 0.022, pan, rev: 0.5, del: 0.35, echo: 0.3 });
+      sample("kalimba", { midi: ROOT + 48, t: t + 0.36, gain: 0.05, pan, rev: 0.7, del: 0.3 });
+    } else if (kind === "boop") {
+      chip([ROOT + 31, ROOT + 43], { duty: 0.5, step: 0.05, hold: 0.03, decay: 0.14, slide: 40 }, { t, gain: 0.024, pan, rev: 0.4, del: 0.25 });
+      glassTick(ROOT + 55, { t: t + 0.06, gain: 0.02, pan });
+    } else if (kind === "leave") {
+      chip([ROOT + 48, ROOT + 43, ROOT + 36], { duty: 0.125, step: 0.07, hold: 0.04, decay: 0.15 }, { t, gain: 0.014, pan, rev: 0.6, del: 0.35, echo: 0.25 });
+      whoosh(t + 0.2, 1400, 300, 1.8, 0.007, pan, 1.6);
+    }
   }
   function setStorm(level) {
     stormLevel = clamp(level, 0, 1);
@@ -798,11 +850,13 @@
     const pan = voice === "violin" ? rand(-0.55, -0.15) : voice === "flute" ? rand(0.15, 0.55) : rand(-0.3, 0.3);
     const phrase = compose(voice), end = playPhrase(voice, phrase, t, pan);
     phraseUntil = end + 2;
+    muffle("tonal", -3, 2400, 1.2, end - t, 3, t); muffle("bed", -1.5, 7000, 1.2, end - t, 3, t);   // the room makes way for the voice
     if (Math.random() < 0.45) {                                              // an answer from someone else in the void
       const other = ["piano", "violin", "flute"].filter((v) => v !== voice && (v === "piano" || has(v)))[(Math.random() * 2) | 0];
       if (other) {
         const ans = compose(other, { from: Math.random() < 0.5 ? phrase : null, shift: Math.random() < 0.5 ? 2 : -1 });
         phraseUntil = playPhrase(other, ans, end + rand(0.8, 2.2), -pan * 0.8) + 2;
+        muffle("tonal", -3, 2400, 0.5, phraseUntil - 2 - t, 3, t);
       }
     }
   }
@@ -1319,6 +1373,94 @@
     };
   }
 
+  // ---------- "Partenza": an original aria for the void ----------
+  // A slow, sweeping ballad written for the room (an original piece in the spirit of the great Italian
+  // farewell ballads, not a transcription of any of them): felt piano arpeggios under soft bowed-vibe
+  // chords, a violin singing the line; then the lift up a whole step where the flute joins it, a high
+  // held climax, and the piano alone again at the end, slowing to a last rolled chord and a chime.
+  // Chords: [bass, pad voicing, arpeggio (eighths)]. Bars: [chord, melody [[midi, beats]…] | null, section].
+  const ARIA_CHORDS = {
+    "D": [38, [62, 66, 69], [50, 57, 62, 66, 69, 66, 62, 57]], "A/C#": [37, [61, 64, 69], [49, 57, 61, 64, 69, 64, 61, 57]],
+    "Bm": [35, [62, 66, 71], [47, 54, 59, 62, 66, 62, 59, 54]], "Bm/A": [33, [62, 66, 71], [45, 54, 59, 62, 66, 62, 59, 54]],
+    "G": [31, [62, 67, 71], [43, 50, 55, 59, 62, 59, 55, 50]], "D/F#": [30, [62, 66, 69], [42, 50, 57, 62, 66, 62, 57, 50]],
+    "Em7": [28, [62, 67, 71], [40, 47, 55, 59, 62, 59, 55, 47]], "Asus": [33, [62, 64, 69], [45, 52, 57, 62, 64, 61, 57, 52]],
+    "E": [40, [64, 68, 71], [40, 47, 52, 56, 59, 56, 52, 47]], "B/D#": [39, [63, 66, 71], [39, 47, 51, 54, 59, 54, 51, 47]],
+    "C#m": [37, [64, 68, 73], [49, 56, 61, 64, 68, 64, 61, 56]], "A": [33, [64, 69, 73], [45, 52, 57, 61, 64, 61, 57, 52]],
+    "E/G#": [32, [64, 68, 71], [44, 52, 56, 59, 64, 59, 56, 52]], "F#m7": [30, [64, 69, 73], [42, 49, 57, 61, 64, 61, 57, 49]],
+    "A/B": [35, [64, 69, 73], [47, 52, 57, 61, 64, 61, 57, 52]], "B7": [35, [63, 66, 69], [47, 54, 59, 63, 66, 63, 59, 54]],
+    "E/B": [35, [64, 68, 71], [47, 52, 56, 59, 64, 59, 56, 52]],
+  };
+  const ARIA_BARS = [
+    ["D", null, "A"], ["A/C#", null, "A"], ["Bm", null, "A"], ["G", null, "A"],
+    ["D", [[69, 1.5], [66, 0.5], [69, 1], [74, 1]], "B"], ["A/C#", [[73, 2], [71, 1], [69, 1]], "B"],
+    ["Bm", [[71, 1.5], [69, 0.5], [66, 1], [62, 1]], "B"], ["Bm/A", [[64, 3], [66, 1]], "B"],
+    ["G", [[67, 1], [71, 1], [74, 1.5], [76, 0.5]], "B"], ["D/F#", [[78, 2], [76, 1], [74, 1]], "B"],
+    ["Em7", [[76, 1.5], [74, 0.5], [71, 1], [67, 1]], "B"], ["Asus", [[69, 4]], "B"],
+    ["E", [[71, 1.5], [68, 0.5], [71, 1], [76, 1]], "C"], ["B/D#", [[75, 2], [73, 1], [71, 1]], "C"],
+    ["C#m", [[73, 1], [76, 1], [80, 2]], "C"], ["A", [[81, 1.5], [80, 0.5], [78, 1], [76, 1]], "C"],
+    ["E/G#", [[80, 2], [78, 1], [76, 1]], "C"], ["F#m7", [[78, 1.5], [76, 0.5], [73, 1], [69, 1]], "C"],
+    ["A/B", [[71, 2], [73, 1], [75, 1]], "C"], ["B7", [[75, 1], [76, 1], [78, 2]], "C"],
+    ["E", [[83, 4]], "D"], ["A", [[81, 1.5], [80, 0.5], [78, 1], [76, 1]], "D"], ["E/B", [[80, 2], [78, 2]], "D"], ["E", [[76, 4]], "D"],
+    ["E", null, "O"], ["A", null, "O"], ["E", null, "O"], ["E", null, "O"],
+  ];
+  const ARIA_DYN = { A: 0.7, B: 0.82, C: 0.95, D: 1.1, O: 0.66 };
+  const ARIA_BEAT = 60 / 64;
+  function ariaSeconds() { return ARIA_BARS.reduce((s, b, i) => s + 4 * ARIA_BEAT * ariaStretch(i), 0) + 8; }
+  function ariaStretch(i) {                                                   // breathe at phrase ends; slow down at the very end
+    const n = ARIA_BARS.length, endOf = (i === 11 || i === 19 || i === 23) ? 1.08 : 1;
+    return i >= n - 4 ? 1 + 0.12 * (i - (n - 4) + 1) : endOf;
+  }
+  function ariaPlayer(bus, t0) {
+    const pan = (v) => { const p = ctx.createStereoPanner(); p.pan.value = v; p.connect(bus); return p; };
+    const pianoBus = pan(0.05), violinBus = pan(-0.22), fluteBus = pan(0.3), padL = pan(-0.55), padR = pan(0.55);
+    let bar = 0, next = t0 + 0.4, done = false;
+    const pads = [];
+    function playBar(i, t) {
+      const [name, mel, sec] = ARIA_BARS[i], [bass, voicing, arp] = ARIA_CHORDS[name], dyn = ARIA_DYN[sec];
+      const bt = ARIA_BEAT * ariaStretch(i), last = i === ARIA_BARS.length - 1;
+      // piano: eighth-note arpeggios (quarters at the end), the bass an octave deeper from the verse on
+      const step = sec === "O" ? 1 : 0.5;
+      for (let k = 0; k * step < 4; k++) {
+        if (last && k > 0) break;
+        const m = arp[(k * step * 2) % arp.length], at = t + k * step * bt + rand(-0.012, 0.012), strong = k * step === 0 || k * step === 2;
+        sample("piano", { midi: m, t: at, gain: (strong ? 0.17 : 0.11) * dyn * rand(0.9, 1.05), lp: 1500 + 1300 * dyn, dest: pianoBus });
+      }
+      if (sec !== "A") sample("piano", { midi: bass + 12 * (bass < 36 ? 1 : 0), t: t - 0.01, gain: 0.14 * dyn, lp: 900, dest: pianoBus });
+      if (last) {                                                             // the last chord, rolled, and a chime high above it
+        [...voicing, voicing[2] + 12].forEach((m, k) => sample("piano", { midi: m, t: t + 0.12 + k * 0.09, gain: 0.12, lp: 2000, dest: pianoBus }));
+        sample("chime", { midi: into(voicing[0] + 24, 84, 92), t: t + 0.9, gain: 0.09, dest: bus });
+      }
+      // the chords: bowed vibes, left and right, swelling in and overlapping into the next bar
+      if (sec !== "O" || i === ARIA_BARS.length - 4) voicing.forEach((m, k) => {
+        const v = sustain("vibes", m, { t, gain: (sec === "A" ? 0.045 : 0.07) * dyn / (1 + k * 0.2), lp: 1800 + 900 * dyn, attack: 1.4, dest: k % 2 ? padR : padL });
+        if (v) { v.stop(t + 4 * bt + 0.3, 1.8); pads.push(v); }
+      });
+      // the line: violin (legato, a soft bow), the flute joining it from the lift
+      if (mel) {
+        let at = t;
+        mel.forEach(([m, beats], k) => {
+          const len = beats * bt, v = (0.7 + 0.3 * (m - 62) / 21) * dyn;
+          sample("violin", { midi: m, t: at, gain: 0.42 * v, attack: 0.12, lp: 3800, hp: 170, dur: len + 0.15, fade: k === mel.length - 1 ? 0.9 : 0.4, dest: violinBus });
+          if (sec === "C" || sec === "D") sample("flute", { midi: m + (sec === "D" ? 0 : 12 * (m < 80 ? 1 : 0)), t: at + 0.02, gain: 0.2 * v, attack: 0.08, lp: 5200, hp: 240,
+                                                            dur: Math.min(len + 0.1, 1.9), fade: 0.5, dest: fluteBus });
+          at += len;
+        });
+      }
+      return 4 * bt;
+    }
+    return {
+      get done() { return done; },
+      pump(until) {
+        while (!done && next < until) {
+          if (bar >= ARIA_BARS.length) { done = true; break; }
+          next += playBar(bar++, next);
+        }
+        return next;
+      },
+      stop(t, fade = 1) { for (const v of pads) { try { v.stop(t, fade); } catch (_) {} } pads.length = 0; },
+    };
+  }
+
   const musicBase = () => new URL("music/", document.baseURI).href;
   async function radioList() {
     if (!radio.list) radio.list = await fetch(musicBase() + "playlist.json").then((r) => r.json()).catch(() => []);
@@ -1337,13 +1479,13 @@
     return radio.mods.get(key);
   }
   // the other room: a closed door (lowpass that breathes a little), the hall and the dark echo
-  function farRoom(t0, seconds, gainDb = 0, fadeIn = 9, fadeOut = 10) {
+  function farRoom(t0, seconds, gainDb = 0, fadeIn = 9, fadeOut = 10, here = false) {
     const level = RADIO_LEVEL * dB(gainDb);                                  // each track measured to sit ~10 dB under the room
     const input = ctx.createGain(), hp = ctx.createBiquadFilter(), door = ctx.createBiquadFilter(), env = ctx.createGain();
-    hp.type = "highpass"; hp.frequency.value = 140; hp.Q.value = 0.5;
-    door.type = "lowpass"; door.frequency.value = 2400; door.Q.value = 0.4;
+    hp.type = "highpass"; hp.frequency.value = here ? 45 : 140; hp.Q.value = 0.5;
+    door.type = "lowpass"; door.frequency.value = here ? 9000 : 2400; door.Q.value = 0.4;   // here: the door is open
     const sway = ctx.createOscillator(), swayAmt = ctx.createGain();
-    sway.frequency.value = 0.031; swayAmt.gain.value = 700; sway.connect(swayAmt).connect(door.frequency); sway.start(t0); sway.stop(t0 + seconds + 2);
+    sway.frequency.value = 0.031; swayAmt.gain.value = here ? 0 : 700; sway.connect(swayAmt).connect(door.frequency); sway.start(t0); sway.stop(t0 + seconds + 2);
     env.gain.setValueAtTime(0, t0); env.gain.linearRampToValueAtTime(level, t0 + fadeIn);
     env.gain.setValueAtTime(level, t0 + seconds - fadeOut); env.gain.linearRampToValueAtTime(0, t0 + seconds);
     input.connect(hp).connect(door).connect(env);
@@ -1357,19 +1499,21 @@
   }
   // play one entry of the playlist from t0 for about `seconds` (offline renders pass prefill)
   async function radioPlay(entry, t0, { seconds = rand(120, 210), prefill = false, piano = null } = {}) {
-    const isMod = entry.file.endsWith(".mod"), isXM = entry.file.endsWith(".xm");
+    const isMod = entry.file.endsWith(".mod"), isXM = entry.file.endsWith(".xm"), isAria = entry.synth === "aria";
+    if (isAria) seconds = ariaSeconds();
     const mod = isMod || isXM ? await loadModule(entry) : null;               // (may fail offline: nothing has started yet)
     if (!prefill) t0 = Math.max(t0, now() + 0.2);
     if (piano === null) piano = isMod && entry.piano !== false && Math.random() < 0.45;   // some modules come through on the felt piano
     piano = piano && isMod && has("piano");
-    const room = farRoom(t0, seconds, piano ? entry.pianoGain || 0 : entry.gain || 0);
+    const room = isAria ? farRoom(t0, seconds, entry.gain || 0, 1.5, 6, true) : farRoom(t0, seconds, piano ? entry.pianoGain || 0 : entry.gain || 0);
     const job = { entry, room, t0, end: t0 + seconds, player: null, el: null, piano };
     radio.playing = job;
     if (radio.onTrack && !prefill) radio.onTrack({ title: entry.title, artist: entry.artist, license: entry.license, piano });
-    if (!prefill) { duck("tonal", -6, 5, Infinity); duck("bed", -1.5, 5, Infinity); }
-    if (mod) {
+    if (!prefill) { duck("tonal", isAria ? -14 : -6, 5, Infinity); duck("bed", isAria ? -3 : -1.5, 5, Infinity); }
+    if (mod || isAria) {
       const onNote = prefill ? null : (ch, v, t, drum) => radio.notes.push({ ch, v, t, drum });
-      job.player = isXM ? xmPlayer(mod, room.input, t0, { maxSeconds: seconds, onNote }) : modPlayer(mod, room.input, t0, { maxSeconds: seconds, piano, onNote });
+      job.player = isAria ? ariaPlayer(room.input, t0) : isXM ? xmPlayer(mod, room.input, t0, { maxSeconds: seconds, onNote })
+                          : modPlayer(mod, room.input, t0, { maxSeconds: seconds, piano, onNote });
       if (prefill) { job.player.pump(t0 + seconds); return job; }
       const tick = () => {
         if (radio.playing !== job) return;
@@ -1417,7 +1561,11 @@
       if (!ambientOn || !musicOn || radio.playing || !ready()) { if (ambientOn && musicOn) scheduleRadio(30); return; }
       const list = await radioList();
       if (!list.length) return;
-      if (!radio.order.length) radio.order = list.map((_, i) => i).sort(() => Math.random() - 0.5);
+      if (!radio.order.length) {
+        radio.order = list.map((_, i) => i).sort(() => Math.random() - 0.5);
+        const a = list.findIndex((e) => e.synth === "aria");                  // the aria comes round early in every rotation
+        if (a >= 0) { radio.order.splice(radio.order.indexOf(a), 1); radio.order.splice(radio.order.length - 1 - ((Math.random() * 3) | 0), 0, a); }
+      }
       radioPlay(list[radio.order.pop()], now() + 0.3).catch(() => radioEnd());
     }, seconds * 1000);
   }
@@ -1435,7 +1583,8 @@
     every(40, 75, deepBreath);
     every(9, 22, chatter);
     every(3.5, 9, piano);
-    every(24, 55, melody);                                                     // a phrase from the piano, a violin or a flute
+    every(24, 55, melody);
+    every(16, 34, distantRoll);                                                // thunder from beyond the horizon, in a storm                                                     // a phrase from the piano, a violin or a flute
     every(45, 100, windChimes);
     every(30, 70, seaSwell);
     every(CHORD_SECONDS, CHORD_SECONDS, changeChord);                          // the harmony clock
@@ -1687,10 +1836,10 @@
       bp.type = "bandpass"; bp.frequency.value = 3200; bp.Q.value = 0.8;
       exc.gain.value = 0;
       src.connect(hp).connect(bp).connect(exc);
-      const bus = ctx.createGain(); bus.gain.value = 1;
+      const bus = ctx.createGain(); bus.gain.value = 0.5;                       // the whole drag sits well under a click
       const p = out(bus, { pan, dry: 0.65, rev: 0.7, del: 0.25 });
-      const echo = ctx.createGain(); echo.gain.value = 0.55; bus.connect(echo).connect(echoIn);
-      const scrape = ctx.createGain(); scrape.gain.value = 0.1; exc.connect(scrape).connect(bus);    // the wire's own hiss
+      const echo = ctx.createGain(); echo.gain.value = 0.35; bus.connect(echo).connect(echoIn);
+      const scrape = ctx.createGain(); scrape.gain.value = 0.06; exc.connect(scrape).connect(bus);   // the wire's own hiss
       const strs = list.map((w, k) => {
         let midi = noteOf(w.id, 0);
         while (mtof(midi) < 98) midi += 12;          // keep every wire between ~G2 and ~A3 so it can bend up a fifth
@@ -1700,7 +1849,7 @@
         fb.gain.value = 0.996;
         const send = ctx.createGain(); send.gain.value = 0.9 * Math.pow(0.8, k);
         exc.connect(send).connect(dl); dl.connect(damp).connect(fb).connect(dl);
-        g.gain.value = (bank.loops.psaltery ? 0.45 : 0.7) * Math.pow(0.85, k); dl.connect(g).connect(bus);
+        g.gain.value = (bank.loops.psaltery ? 0.3 : 0.45) * Math.pow(0.85, k); dl.connect(g).connect(bus);
         return { dl, fb, f, midi };
       });
       // the bowed psaltery: its loudness follows the hand, its pitch the stretch
@@ -1713,12 +1862,12 @@
     dragMove(speed, stretch = 0) {
       if (!bow) return;
       const t = now();
-      bow.exc.gain.setTargetAtTime(Math.min(0.28, speed * 0.00028), t, 0.05);
+      bow.exc.gain.setTargetAtTime(Math.min(0.2, speed * 0.0002), t, 0.05);
       bow.stretch = clamp(stretch, 0, 1);
       const ratio = Math.pow(2, (bow.stretch * 7) / 12);                       // up to a fifth of tension
       for (const s of bow.strings) s.dl.delayTime.setTargetAtTime(1 / (s.f * ratio), t, 0.08);
       if (bow.sing) {
-        bow.sing.amp.gain.setTargetAtTime(Math.min(0.32, 0.03 + speed * 0.0005), t, 0.12);
+        bow.sing.amp.gain.setTargetAtTime(Math.min(0.2, 0.02 + speed * 0.0003), t, 0.12);
         bow.sing.glide(bow.bm + bow.stretch * 7, t, 0.25);
       }
     },
@@ -1740,7 +1889,7 @@
         src.buffer = pluckBuffer(s.midi + 12, 0.7);
         src.playbackRate.setValueAtTime(ratio, t + k * 0.03);
         src.playbackRate.exponentialRampToValueAtTime(1, t + k * 0.03 + 0.35);
-        const g = ctx.createGain(); g.gain.value = 0.38 * Math.pow(0.8, k);
+        const g = ctx.createGain(); g.gain.value = 0.2 * Math.pow(0.8, k);      // the release: a soft twang, not a slap
         src.connect(g).connect(b.bus);
         src.start(t + k * 0.03);
       });
@@ -1786,12 +1935,26 @@
       if (!added && !removed && !changed) glassTick(ROOT + 36, { t, gain: 0.025, rev: 0.5 });
     },
 
+    // the robot easter egg: "arrive", "hello", "boop" (clicked), "leave"
+    robot(kind = "hello", pan = 0) { if (ready()) robotVoice(kind, pan); },
+    // the radio: let the current track go now / play a keygen tune now
+    stopRadio() { if (ctx && radio.playing) radioEnd(1.5); },
+    async keygen() {
+      const list = await radioList(), ks = list.map((e, i) => (e.keygen ? i : -1)).filter((i) => i >= 0);
+      return ks.length ? api.play(ks[(Math.random() * ks.length) | 0]) : null;
+    },
     // the view changed: the bubbles fly to their new places over `seconds`
     morph({ to = "cloud", seconds = 2.7 } = {}) { if (ready()) morphAt(now() + 0.02, { to, seconds }); },
     // how close a storm is, 0..1 (rain and wind lean in with it)
     storm(level = 0) { setStorm(level); },
     // lightning just flashed: its thunder arrives `delay` s later. dist 0.25 close … 1 far, power 0..1, pan -1..1
-    thunder({ delay = 4, dist = 0.7, power = 0.6, pan = 0 } = {}) { if (ready()) thunderAt(now() + delay, { dist, power, pan }); },
+    thunder({ delay = 4, dist = 0.7, power = 0.6, pan = 0 } = {}) {
+      if (!ready()) return;
+      const at = now() + delay, o = { dist, power, pan };
+      if (thunderAt(at, o)) return;
+      const job = (bank.lazy.thunder || []).find((e) => e.loading);            // nothing decoded yet: as soon as one is
+      if (job) job.loading.then(() => { if (ready()) thunderAt(Math.max(now() + 0.05, at), o); });
+    },
     // a melody now, from "piano", "violin" or "flute" (for trying it out)
     phrase(voice = null) {
       if (!ready() || !bank.ready) return null;

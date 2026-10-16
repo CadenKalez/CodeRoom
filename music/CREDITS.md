@@ -48,5 +48,11 @@ allows passing a module on only as the original, unbundled file. They are theref
 local server downloads it from The Mod Archive into `~/Library/Caches/Code Room/modules/` (the same as
 saving it from the site) and plays it from there, unmodified. Offline, the radio simply skips them.
 
+### Partenza
+
+*Partenza (an aria for the void)* is an original piece written for Code Room and played live by
+`sound.js` from the sample pack (Steinway, bowed vibraphone, Iowa violin and flute). It is listed in
+`playlist.json` as `"synth": "aria"`; there is no audio file.
+
 Licenses: CC BY 4.0 https://creativecommons.org/licenses/by/4.0/ · CC BY-SA https://creativecommons.org/licenses/by-sa/3.0/ ·
 CC BY-NC-SA https://creativecommons.org/licenses/by-nc-sa/3.0/ · Public Domain as declared on The Mod Archive.
