@@ -1,0 +1,2052 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Code Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Orbitron:wght@600;800&family=Chakra+Petch:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg0: #04020c;
+    --ink: #e8ecff;
+    --ink-dim: #8a93c4;
+    --glass: rgba(12, 15, 46, 0.86);
+    --glass-solid: rgba(12, 14, 40, 0.96);
+    --glass-edge: rgba(120, 200, 255, 0.22);
+    --dep: #4ff3ff;
+    --user: #ff5fd2;
+    --accent: #ffe14f;
+    --good: #7dff6a;
+    --bad: #ff5f6d;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+    --display: "Chakra Petch", "JetBrains Mono", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg0); color: var(--ink); font-family: var(--mono); }
+  button { font-family: inherit; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+  #gl { pointer-events: none; }
+  canvas.dragging { cursor: grabbing; }
+  canvas.hovering { cursor: pointer; }
+
+  header {
+    position: fixed; top: 0; left: 0; right: 0; padding: 14px 18px; z-index: 5;
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap; pointer-events: none;
+  }
+  header > * { pointer-events: auto; }
+  h1 {
+    margin: 0; font-family: Orbitron, var(--mono); font-weight: 800; font-size: 20px; letter-spacing: 0.18em;
+    background: linear-gradient(90deg, #ff5fd2, #ffe14f, #4ff3ff); -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 10px rgba(255, 95, 210, 0.45));
+  }
+  .stats { font-size: 11px; color: var(--ink-dim); letter-spacing: 0.04em; }
+
+  .repo-wrap { position: relative; }
+  .repo {
+    all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; max-width: 320px;
+    font: 700 14px var(--display); padding: 6px 12px; border-radius: 10px;
+    background: var(--glass); border: 1px solid rgba(255, 95, 210, 0.45);
+  }
+  .repo:hover { border-color: var(--user); }
+  .repo .rdot { width: 8px; height: 8px; border-radius: 50%; background: var(--user); box-shadow: 0 0 8px var(--user); flex: none; }
+  .repo #repoName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .repo .caret { color: var(--ink-dim); font-size: 10px; }
+  .pop {
+    position: absolute; top: 42px; left: 0; width: 380px; max-width: calc(100vw - 32px); padding: 14px;
+    background: var(--glass-solid); border: 1px solid var(--glass-edge); border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+
+  /* repository choices (shared by the header menu and the welcome screen) */
+  .choices { display: flex; flex-direction: column; gap: 10px; text-align: left; }
+  .primary {
+    all: unset; cursor: pointer; text-align: center; padding: 10px 16px; border-radius: 10px; font: 700 14px var(--display);
+    color: #0a0820; background: linear-gradient(90deg, #ff5fd2, #b98bff 55%, #4ff3ff); box-shadow: 0 0 24px rgba(255, 95, 210, 0.3);
+  }
+  .primary:hover { filter: brightness(1.1); }
+  .pathform { display: flex; gap: 6px; }
+  .pathform input {
+    flex: 1; min-width: 0; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--glass-edge);
+    background: rgba(0,0,0,0.35); color: var(--ink); font: 12px var(--mono); outline: none;
+  }
+  .pathform input:focus { border-color: var(--dep); }
+  .ghost {
+    all: unset; cursor: pointer; padding: 7px 12px; border-radius: 8px; font-size: 12px; color: var(--ink);
+    border: 1px solid var(--glass-edge); background: rgba(255,255,255,0.04);
+  }
+  .ghost:hover { border-color: var(--dep); }
+  .ghost:disabled { opacity: 0.4; cursor: default; }
+  .choices h4 { margin: 6px 0 0; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-dim); font-weight: 400; }
+  .recent { display: flex; flex-direction: column; gap: 2px; max-height: 260px; overflow: auto; }
+  .recent button {
+    all: unset; cursor: pointer; display: grid; grid-template-columns: 1fr auto; gap: 0 10px; padding: 7px 10px; border-radius: 8px;
+  }
+  .recent button:hover { background: rgba(79, 243, 255, 0.1); }
+  .recent b { font: 700 13px var(--display); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .recent small { grid-column: 1; font-size: 10px; color: var(--ink-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .recent span { grid-column: 2; grid-row: 1 / 3; align-self: center; font-size: 10px; color: var(--ink-dim); text-align: right; }
+
+  .search { position: relative; margin-left: auto; }
+  .search input {
+    width: 230px; padding: 8px 12px; border-radius: 999px; border: 1px solid var(--glass-edge);
+    background: var(--glass); color: var(--ink); font: 12px var(--mono); outline: none;
+  }
+  .search input:focus { border-color: var(--dep); box-shadow: 0 0 0 3px rgba(79, 243, 255, 0.15); }
+  .results {
+    position: absolute; top: 38px; right: 0; width: 320px; max-height: 50vh; overflow: auto;
+    background: var(--glass-solid); border: 1px solid var(--glass-edge); border-radius: 12px; display: none; padding: 4px;
+  }
+  .results.open { display: block; }
+  .results button { all: unset; display: flex; gap: 8px; align-items: center; width: 100%; padding: 6px 10px; border-radius: 8px; font-size: 12px; cursor: pointer; box-sizing: border-box; }
+  .results button:hover, .results button.active { background: rgba(79, 243, 255, 0.12); }
+
+  .toolbar { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tbtn {
+    all: unset; cursor: pointer; font-size: 11px; padding: 7px 11px; border-radius: 999px;
+    border: 1px solid var(--glass-edge); background: var(--glass); color: var(--ink-dim);
+  }
+  .tbtn[aria-pressed="true"] { color: var(--bg0); background: var(--dep); border-color: var(--dep); }
+  .tbtn.update { color: var(--accent); border-color: rgba(255, 225, 79, 0.4); }
+  .tbtn.update .spin { display: inline-block; }
+  .tbtn.busy .spin { animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .sliders {
+    display: flex; gap: 14px; align-items: center; padding: 5px 14px; border-radius: 999px;
+    border: 1px solid var(--glass-edge); background: var(--glass);
+  }
+  .sliders label { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--ink-dim); cursor: pointer; }
+  .sliders output { min-width: 34px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .sliders input[type="range"] { width: 90px; accent-color: var(--dep); cursor: pointer; margin: 0; }
+
+  .legend {
+    position: fixed; left: 16px; bottom: 16px; display: flex; flex-wrap: wrap; gap: 6px; z-index: 2;
+    max-width: min(620px, calc(100vw - 32px)); max-height: 28vh; overflow: auto;
+  }
+  .chip {
+    all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 11px; padding: 5px 10px;
+    border-radius: 999px; background: var(--glass); border: 1px solid var(--glass-edge);
+  }
+  .chip .dot { width: 9px; height: 9px; border-radius: 50%; box-shadow: 0 0 8px currentColor; flex: none; }
+  .chip.off { opacity: 0.35; }
+  .chip small { color: var(--ink-dim); }
+
+  .hint { position: fixed; right: 16px; bottom: 16px; font-size: 10px; color: var(--ink-dim); text-align: right; line-height: 1.6; z-index: 1; }
+
+  aside {
+    position: fixed; top: 64px; right: 16px; bottom: 16px; width: 380px; max-width: calc(100vw - 32px); z-index: 4;
+    background: var(--glass); border: 1px solid var(--glass-edge); border-radius: 16px;
+    display: flex; flex-direction: column; overflow: hidden; transform: translateX(calc(100% + 24px)); transition: transform 0.35s cubic-bezier(.2,.8,.2,1);
+    box-shadow: 0 0 40px rgba(79, 243, 255, 0.08);
+  }
+  aside.open { transform: none; }
+  aside .head { padding: 16px 18px 10px; border-bottom: 1px solid var(--glass-edge); position: relative; }
+  aside .close { all: unset; cursor: pointer; position: absolute; top: 12px; right: 14px; font-size: 18px; color: var(--ink-dim); }
+  aside h2 { margin: 0 0 4px; font: 700 18px var(--display); word-break: break-all; padding-right: 24px; }
+  aside .group { font-size: 11px; display: inline-flex; align-items: center; gap: 6px; word-break: break-all; }
+  aside .meta { font-size: 11px; color: var(--ink-dim); margin-top: 6px; line-height: 1.6; word-break: break-all; }
+  aside .meta a { color: var(--dep); text-decoration: none; border-bottom: 1px dotted currentColor; }
+  aside .body { overflow: auto; padding: 12px 18px 18px; flex: 1; }
+  aside h3 { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-dim); margin: 14px 0 6px; }
+  aside h3 b { color: var(--ink); }
+  .links { display: flex; flex-wrap: wrap; gap: 4px; }
+  .links button {
+    all: unset; cursor: pointer; font-size: 11px; padding: 3px 8px; border-radius: 6px;
+    background: rgba(255,255,255,0.05); border: 1px solid transparent; word-break: break-all;
+  }
+  .links.dep button { color: var(--dep); }
+  .links.user button { color: var(--user); }
+  .links button:hover { border-color: currentColor; }
+  .links button small { color: var(--ink-dim); margin-left: 4px; }
+  .classes { font-size: 11px; color: var(--accent); line-height: 1.7; }
+  .fns { font-size: 10.5px; line-height: 1.65; max-height: 220px; overflow: auto; padding: 6px 10px; border-radius: 10px; background: rgba(0,0,0,0.3); }
+  .fns div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--good); }
+  .fns span { color: var(--ink-dim); }
+  pre {
+    margin: 0; font-size: 10.5px; line-height: 1.5; padding: 10px 12px; border-radius: 10px; overflow: auto;
+    background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(79, 243, 255, 0.12); color: #b9c3ff; max-height: 340px;
+  }
+  pre .kw { color: #ff79c6; } pre .str { color: #f1fa8c; } pre .com { color: #5e6a9e; font-style: italic; }
+  pre .pp { color: #50fa7b; } pre .num { color: #ffb86c; }
+  .empty { font-size: 11px; color: var(--ink-dim); }
+
+  /* welcome / loading screen */
+  .welcome {
+    position: fixed; inset: 0; z-index: 8; display: grid; place-items: center; padding: 24px;
+    background: radial-gradient(ellipse at 50% 40%, rgba(23, 26, 82, 0.55), rgba(4, 2, 12, 0.85));
+  }
+  .welcome[hidden], .modal[hidden], .pop[hidden] { display: none; }
+  .welcome .card {
+    width: min(480px, 100%); text-align: center; padding: 30px 28px; border-radius: 20px;
+    background: var(--glass-solid); border: 1px solid var(--glass-edge); box-shadow: 0 0 80px rgba(255, 95, 210, 0.12);
+  }
+  .welcome h2 {
+    margin: 0 0 6px; font-family: Orbitron, var(--mono); font-weight: 800; font-size: 30px; letter-spacing: 0.2em;
+    background: linear-gradient(90deg, #ff5fd2, #ffe14f, #4ff3ff); -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .welcome .sub { margin: 0 0 20px; color: var(--ink-dim); font-size: 12px; line-height: 1.6; }
+  .welcome .langs { margin-top: 16px; font-size: 10px; color: var(--ink-dim); line-height: 1.7; }
+  .welcome .path { margin-top: 12px; font-size: 11px; color: var(--ink-dim); word-break: break-all; }
+  .welcome .err { margin-bottom: 14px; padding: 10px 12px; border-radius: 10px; font-size: 12px; color: #ffb3bb; background: rgba(255, 95, 109, 0.1); border: 1px solid rgba(255, 95, 109, 0.35); word-break: break-word; }
+  .spinner {
+    width: 54px; height: 54px; margin: 6px auto 0; border-radius: 50%;
+    border: 3px solid rgba(79, 243, 255, 0.15); border-top-color: var(--dep); border-right-color: var(--user);
+    animation: spin 0.9s linear infinite; box-shadow: 0 0 30px rgba(79, 243, 255, 0.25);
+  }
+
+  /* folder browser (browser mode; the Mac app uses the native picker) */
+  .modal { position: fixed; inset: 0; z-index: 9; display: grid; place-items: center; padding: 24px; background: rgba(4, 2, 12, 0.7); }
+  .modal .card {
+    width: min(560px, 100%); max-height: min(640px, calc(100vh - 48px)); display: flex; flex-direction: column; gap: 10px;
+    padding: 16px; border-radius: 16px; background: var(--glass-solid); border: 1px solid var(--glass-edge);
+  }
+  .modal h3 { margin: 0; font: 700 16px var(--display); }
+  .crumb { font-size: 11px; color: var(--ink-dim); word-break: break-all; }
+  .crumb b { color: var(--good); font-weight: 400; }
+  .dirs { flex: 1; overflow: auto; min-height: 160px; border-radius: 10px; background: rgba(0,0,0,0.3); padding: 4px; }
+  .dirs button { all: unset; cursor: pointer; display: flex; gap: 8px; align-items: center; width: 100%; box-sizing: border-box; padding: 6px 10px; border-radius: 6px; font-size: 12px; }
+  .dirs button:hover { background: rgba(79, 243, 255, 0.1); }
+  .dirs .git { margin-left: auto; font-size: 10px; color: var(--good); }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .grow { flex: 1; }
+
+  #toast {
+    position: fixed; top: 64px; left: 50%; transform: translate(-50%, -12px); opacity: 0; pointer-events: none; z-index: 10;
+    font-size: 12px; padding: 10px 16px; border-radius: 12px; background: var(--glass-solid); border: 1px solid var(--glass-edge);
+    transition: opacity 0.3s, transform 0.3s; max-width: calc(100vw - 32px); text-align: center;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+  #toast small { color: var(--ink-dim); margin-left: 6px; }
+  #toast .gone { margin-top: 6px; font-size: 10px; color: #ff9aa4; text-align: left; }
+  /* now playing: the radio's track and its credit, faint, at the bottom centre */
+  #np {
+    position: fixed; bottom: 14px; left: 50%; transform: translate(-50%, 6px); opacity: 0; pointer-events: none; z-index: 4;
+    font-size: 10.5px; letter-spacing: 0.04em; color: var(--ink-dim); white-space: nowrap; transition: opacity 2.5s, transform 2.5s;
+  }
+  #np.show { opacity: 0.75; transform: translate(-50%, 0); }
+  #np b { color: #c9b8ff; font-weight: 500; }
+  #tip {
+    position: fixed; pointer-events: none; font-size: 11px; padding: 5px 9px; border-radius: 8px; z-index: 6;
+    background: rgba(4, 2, 12, 0.85); border: 1px solid var(--glass-edge); transform: translate(12px, 12px); display: none; white-space: nowrap;
+  }
+
+  @media (max-width: 720px) {
+    header { padding: 10px 16px; gap: 8px; }
+    h1 { font-size: 15px; }
+    .stats { display: none; }
+    .search { margin-left: 0; width: 100%; order: 3; }
+    .search input { width: 100%; }
+    .results { width: 100%; }
+    aside { top: auto; left: 16px; right: 16px; width: auto; height: 55vh; transform: translateY(calc(100% + 24px)); }
+    .hint { display: none; }
+    aside.open ~ .legend { display: none; }
+  }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<canvas id="scene"></canvas>
+<div id="tip"></div>
+<div id="toast"></div>
+<div id="np"></div>
+
+<header>
+  <h1>CODE ROOM</h1>
+  <div class="repo-wrap">
+    <button class="repo" id="repoBtn" title="Open another repository (O)"><span class="rdot"></span><span id="repoName">Open repository</span><span class="caret">▾</span></button>
+    <div class="pop" id="repoMenu" hidden></div>
+  </div>
+  <span class="stats" id="stats"></span>
+  <div class="search">
+    <input id="q" type="search" placeholder="Search module, class or function…" autocomplete="off" spellcheck="false">
+    <div class="results" id="results"></div>
+  </div>
+  <div class="toolbar">
+    <button class="tbtn" id="tTree" aria-pressed="false" title="Highlight the full transitive dependency tree of the selection">Tree</button>
+    <button class="tbtn" id="tLabels" aria-pressed="false" title="Show all labels">Labels</button>
+    <button class="tbtn" id="tPhys" aria-pressed="true" title="Strand physics (turn off to save CPU)">Physics</button>
+    <button class="tbtn" id="tSpin" aria-pressed="true" title="Auto-rotate">Spin</button>
+  </div>
+  <div class="sliders" title="Double-click a slider to reset it">
+    <label>Size <input id="sSize" type="range" min="0.25" max="1.6" step="0.05" value="1"><output id="oSize">100%</output></label>
+    <label>Spread <input id="sSpread" type="range" min="0.6" max="3" step="0.05" value="1"><output id="oSpread">1.0×</output></label>
+    <label title="Sound volume">Vol <input id="sVol" type="range" min="0" max="1" step="0.05" value="0.7"><output id="oVol">70%</output></label>
+  </div>
+  <div class="toolbar">
+    <button class="tbtn update" id="tUpdate" title="Rescan the repository for changes (U)"><span class="spin">⟳</span> Update</button>
+    <button class="tbtn" id="tAuto" aria-pressed="false" title="Rescan automatically every 4 seconds">Auto</button>
+    <button class="tbtn" id="tSound" aria-pressed="true" title="Ambience and sound effects">♪ Sound</button>
+    <button class="tbtn" id="tMusic" aria-pressed="true" title="Generative music: felt piano and distant chip tunes over the ambience">♫ Music</button>
+  </div>
+  <span class="stats" id="scanned"></span>
+</header>
+
+<aside id="panel">
+  <div class="head">
+    <button class="close" id="close" aria-label="Close">×</button>
+    <h2 id="pName"></h2>
+    <span class="group" id="pGroup"></span>
+    <div class="meta" id="pMeta"></div>
+  </div>
+  <div class="body">
+    <h3>Depends on <b id="pDepN"></b></h3>
+    <div class="links dep" id="pDeps"></div>
+    <h3>Used by <b id="pUseN"></b></h3>
+    <div class="links user" id="pUsers"></div>
+    <h3 id="pTreeH" hidden>Full dependency tree <b id="pTreeN"></b></h3>
+    <div class="links dep" id="pTree"></div>
+    <h3>Functions <b id="pFnN"></b></h3>
+    <div class="fns" id="pFns"></div>
+    <h3>Types</h3>
+    <div class="classes" id="pClasses"></div>
+    <h3 id="pFile"></h3>
+    <pre id="pCode"></pre>
+  </div>
+</aside>
+
+<div class="legend" id="legend"></div>
+<div class="hint">size = functions &nbsp; strands = references<br>
+  drag empty space · orbit &nbsp; drag bubble · shake it &nbsp; scroll · zoom<br>
+  <span style="color:var(--dep)">●</span> depends on &nbsp; <span style="color:var(--user)">●</span> used by<br><span id="fps"></span></div>
+
+<div class="welcome" id="welcome" hidden>
+  <div class="card">
+    <h2>CODE ROOM</h2>
+    <p class="sub" id="wSub"></p>
+    <div id="wBody"></div>
+  </div>
+</div>
+
+<div class="modal" id="browser" hidden>
+  <div class="card">
+    <h3>Choose a repository</h3>
+    <div class="crumb" id="bPath"></div>
+    <div class="dirs" id="bDirs"></div>
+    <div class="row">
+      <button class="ghost" id="bUp">↑ Up</button>
+      <span class="grow"></span>
+      <button class="ghost" id="bCancel">Cancel</button>
+      <button class="primary" id="bOpen">Open this folder</button>
+    </div>
+  </div>
+</div>
+
+<script src="sound.js"></script>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const canvas = $("scene");
+  const ctx = canvas.getContext("2d");
+  // inside Code Room.app the page can ask the Mac side for a folder picker, Finder, editors
+  const native = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.codeRoom;
+  const tell = (msg) => { try { native.postMessage(msg); } catch (_) {} };
+  // procedural sound (sound.js); a silent stand-in keeps the page working without it
+  const SFX = window.CodeRoomSound || new Proxy({}, { get: () => () => {} });
+
+  // ---------- state ----------
+  const PALETTE = ["#ff5fd2", "#4ff3ff", "#ffe14f", "#7dff6a", "#b98bff", "#ff9a3d", "#ff5f6d", "#3da9ff",
+                   "#5fffc8", "#ffb3f0", "#c6ff3d", "#ff6ad5", "#8cf0ff", "#ffd28c", "#a0a8ff"];
+  let nodes = [], links = [], byId = new Map(), groups = [], groupCounts = {}, proj = [], bigNodes = new Set();
+  const groupColor = {}, hiddenGroups = new Set(), anchors = {};
+  let alpha = 1, T = 0, last = performance.now(), idle = 0, LS = 1;
+  let selected = null, hovered = null, dragNode = null;
+  let treeMode = false, allLabels = false, spin = true, physics = true;
+  let treeSet = null, matchSet = null;
+  let sizeScale = 1, spacing = 1; // Size slider (drawn radius) and Spread slider (distance between bubbles)
+  let currentRoot = null, repoName = "", recent = [], home = "", supported = [];
+
+  function visible(n) { return !hiddenGroups.has(n.group); }
+  function hexA(hex, a) {
+    const v = parseInt(hex.slice(1), 16);
+    return `rgba(${v >> 16},${(v >> 8) & 255},${v & 255},${a})`;
+  }
+  function mixWhite(hex, t) {
+    const v = parseInt(hex.slice(1), 16), m = (c) => Math.round(c + (255 - c) * t);
+    return `rgb(${m(v >> 16)},${m((v >> 8) & 255)},${m(v & 255)})`;
+  }
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+  function tildify(p) { return home && p && p.startsWith(home) ? "~" + p.slice(home.length) : p; }
+  function baseName(p) { return String(p).replace(/\/+$/, "").split("/").pop() || p; }
+  function shortGroup(g) { const parts = g.split("/"); return parts.length > 2 ? "…/" + parts.slice(-2).join("/") : g; }
+
+  // bubble size: functions defined in the module; declaration-only files stay small
+  function radiusOf(n) {
+    if (n.funcs > 0) return Math.min(58, 6 + Math.sqrt(n.funcs) * 2.6);
+    return 4 + Math.min(6, Math.sqrt(n.loc) * 0.25);
+  }
+
+  // ---------- layout: 3D force simulation, clustered by folder ----------
+  let CUT2 = 250000;
+  function repel(a, b) {
+    let dx = a.x - b.x, dy = a.y - b.y, dz = a.z - b.z;
+    const d2 = dx * dx + dy * dy + dz * dz + 0.01;
+    if (d2 > CUT2) return;
+    const d = Math.sqrt(d2), minD = a.r + b.r + 8;
+    let f = 3200 / d2 * alpha;
+    if (d < minD) f += (minD - d) * 0.06;
+    dx /= d; dy /= d; dz /= d;
+    a.vx += dx * f; a.vy += dy * f; a.vz += dz * f;
+    b.vx -= dx * f; b.vy -= dy * f; b.vz -= dz * f;
+  }
+  const CELL = 300, cellKey = (x, y, z) => ((x + 2048) * 4096 + (y + 2048)) * 4096 + (z + 2048);
+  function tick() {
+    if (alpha < 0.004) return;
+    const N = nodes.length;
+    if (N <= 300) {
+      CUT2 = 250000;
+      for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) repel(nodes[i], nodes[j]);
+    } else {
+      // big repos: only neighbours in the surrounding grid cells push each other
+      CUT2 = CELL * CELL;
+      const grid = new Map();
+      for (const n of nodes) {
+        n.cx = Math.floor(n.x / CELL); n.cy = Math.floor(n.y / CELL); n.cz = Math.floor(n.z / CELL);
+        const k = cellKey(n.cx, n.cy, n.cz);
+        let arr = grid.get(k); if (!arr) grid.set(k, (arr = []));
+        arr.push(n);
+      }
+      for (const a of nodes) {
+        for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) {
+          const arr = grid.get(cellKey(a.cx + dx, a.cy + dy, a.cz + dz));
+          if (arr) for (const b of arr) if (b.i > a.i) repel(a, b);
+        }
+      }
+    }
+    for (const l of links) {
+      const a = l.s, b = l.t;
+      const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z;
+      const d = Math.sqrt(dx * dx + dy * dy + dz * dz) + 0.01;
+      const rest = 60 + a.r + b.r;
+      const k = (d - rest) / d * 0.012 * alpha * (a.group === b.group ? 1.5 : 0.6);
+      const wa = b.inc.length / (a.inc.length + b.inc.length + 1), wb = 1 - wa;
+      a.vx += dx * k * wb; a.vy += dy * k * wb; a.vz += dz * k * wb;
+      b.vx -= dx * k * wa; b.vy -= dy * k * wa; b.vz -= dz * k * wa;
+    }
+    for (const n of nodes) {
+      if (n === dragNode) { n.vx = n.vy = n.vz = 0; continue; }
+      const an = anchors[n.group];
+      n.vx += (an.x - n.x) * 0.006 * alpha - n.x * 0.0008 * alpha;
+      n.vy += (an.y - n.y) * 0.006 * alpha - n.y * 0.0008 * alpha;
+      n.vz += (an.z - n.z) * 0.006 * alpha - n.z * 0.0008 * alpha;
+      n.vx *= 0.82; n.vy *= 0.82; n.vz *= 0.82;
+      n.x += n.vx; n.y += n.vy; n.z += n.vz;
+    }
+    alpha *= 0.991;
+  }
+
+  // world position = layout position × spread + a gentle floating bob
+  // While a repository opens, the bloom unfurls it like a rose: each bubble swings out from the
+  // centre along a gentle spiral (inner petals first), then two soft pulses ripple from the rim
+  // back to the centre. n.bs scales the bubble, n.bl is how far its petal has opened (0..1).
+  let bloom = null;
+  const easeOutBack = (p) => { const c1 = 1.15, c3 = c1 + 1, u = p - 1; return 1 + c3 * u * u * u + c1 * u * u; };
+  function updateWorld() {
+    const B = bloom && T > bloom.end ? (bloom = null) : bloom;
+    for (const n of nodes) {
+      let x = n.x * spacing, y = n.y * spacing, z = n.z * spacing, bob = Math.sin(T * 0.9 + n.phase) * 3;
+      n.bs = 1; n.bl = 1; n.bp = 0;
+      if (B && n.bDelay !== undefined) {
+        const p = Math.max(0, Math.min(1, (T - B.start - n.bDelay) / 1.5)), e = 1 - Math.pow(1 - p, 3);
+        const a = (1 - e) * n.bTwist, c = Math.cos(a), si = Math.sin(a);
+        const rx = (x * c - z * si) * e, rz = (x * si + z * c) * e;
+        x = rx; z = rz; y *= e * e; bob *= e;
+        n.bs = easeOutBack(p); n.bl = p;
+        let pulse = 0;
+        for (const [at, k] of [[B.waveAt, 1], [B.wave2At, 0.5]]) {
+          const q = (T - at) / B.waveDur;
+          if (q <= 0 || q >= 1) continue;
+          const d = (n.bRad - B.maxR * (1 - q)) / (0.14 * B.maxR);
+          pulse += k * Math.exp(-d * d) * Math.sin(q * Math.PI);    // fade the wave in and out at its ends
+        }
+        n.bs *= 1 + 0.16 * pulse; n.bp = pulse;
+      }
+      if (beats.length || flutter > 0.002) {                   // the music: an outward ripple per kick, a flutter with the melody
+        let wave = 0;
+        const rr = n.rr || 0;
+        for (const b of beats) {
+          const age = T - b.t, d = (rr - fitR * age * 0.95) / (0.13 * fitR);
+          wave += b.s * Math.exp(-d * d) * (1 - age / 1.5);
+        }
+        if (wave > 0.002 && rr > 1) {
+          const k = (6 * wave * spacing) / rr;
+          x += (n.x - focusL.x) * k; y += (n.y - focusL.y) * k * 0.6; z += (n.z - focusL.z) * k;
+          n.bs *= 1 + 0.07 * wave;
+        }
+        n.wv = wave;
+        if (flutter > 0.002) { const a = flutter * 2.2 * spacing; x += a * Math.sin(T * 11 + n.phase * 5); y += a * Math.cos(T * 13.7 + n.phase * 7); }
+      } else n.wv = 0;
+      n.wx = x; n.wy = y + bob; n.wz = z;
+    }
+  }
+  // schedule the bloom for a freshly opened repository; returns the sound cues (seconds from now)
+  function startBloom() {
+    if (!nodes.length) return null;
+    const TAU = Math.PI * 2;
+    let maxR = 1;
+    for (const n of nodes) { n.bRad = Math.sqrt(n.x * n.x + n.y * n.y + n.z * n.z); maxR = Math.max(maxR, n.bRad); }
+    const ranked = [...nodes].sort((a, b) => a.bRad - b.bRad), N = ranked.length;
+    ranked.forEach((n, rank) => {
+      const ang = (Math.atan2(n.z, n.x) + TAU) % TAU;
+      n.bDelay = (n.bRad / maxR) * 1.36 + (rank / N) * 0.34 + (ang / TAU) * 0.18;
+      n.bTwist = 1.6 * (0.6 + 0.4 * n.bRad / maxR);
+    });
+    const start = T + 0.2, waveAt = start + 1.7 + 1.1, wave2At = waveAt + 0.95, waveDur = 1.3;
+    bloom = { start, waveAt, wave2At, waveDur, maxR, end: wave2At + waveDur + 0.1 };
+    // a petal note for a handful of bubbles spread through the bloom order, panned where they open
+    const byDelay = [...nodes].sort((a, b) => a.bDelay - b.bDelay), count = Math.min(N, 8 + Math.min(8, Math.round(Math.log2(1 + N / 20))));
+    const petals = [];
+    for (let k = 0; k < count; k++) {
+      const n = byDelay[Math.floor((k + 0.5) * N / count)];
+      petals.push({ at: start - T + n.bDelay + 0.35, pan: Math.max(-0.85, Math.min(0.85, (n.x * cy - n.z * sy) / maxR)) });
+    }
+    return { start: start - T, petals, waves: [waveAt - T, wave2At - T], end: bloom.end - T };
+  }
+
+  // ---------- strands: one per reference, each a tiny verlet rope ----------
+  // Every link gets 1..6 strands (log2 of how often the importer mentions the imported
+  // module). A strand is NP points; the two ends are pinned to the bubbles' surfaces,
+  // the interior points sway with a little gravity and drift and lag when bubbles move.
+  const SLACK = 1.12, DAMP = 0.93, GRAV = -0.01, BOW = 0.035, STRAND_CAP = 6000;
+  let NP = 6;          // points per strand rope (5 on big graphs)
+  let strands = [], SP = new Float32Array(0), SQ = new Float32Array(0), SX = new Float32Array(0), SY = new Float32Array(0);
+  const E = new Float32Array(6);
+
+  function rndUnit() {
+    const u = Math.random() * 2 - 1, th = Math.random() * Math.PI * 2, r = Math.sqrt(1 - u * u);
+    return [r * Math.cos(th), u, r * Math.sin(th)];
+  }
+  function strandEnds(st) {
+    const s = st.l.s, t = st.l.t, sp = st.spread;
+    let dx = t.wx - s.wx, dy = t.wy - s.wy, dz = t.wz - s.wz;
+    const d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1; dx /= d; dy /= d; dz /= d;
+    const ax = dx + st.ax * sp, ay = dy + st.ay * sp, az = dz + st.az * sp;
+    const ka = s.r * s.bs * sizeScale * 0.9 / (Math.sqrt(ax * ax + ay * ay + az * az) || 1);
+    E[0] = s.wx + ax * ka; E[1] = s.wy + ay * ka; E[2] = s.wz + az * ka;
+    const bx = -dx + st.bx * sp, by = -dy + st.by * sp, bz = -dz + st.bz * sp;
+    const kb = t.r * t.bs * sizeScale * 0.9 / (Math.sqrt(bx * bx + by * by + bz * bz) || 1);
+    E[3] = t.wx + bx * kb; E[4] = t.wy + by * kb; E[5] = t.wz + bz * kb;
+  }
+  function straighten(o) {
+    for (let k = 0; k < NP; k++) {
+      const f = k / (NP - 1), j = o + k * 3;
+      SP[j] = SQ[j] = E[0] + (E[3] - E[0]) * f;
+      SP[j + 1] = SQ[j + 1] = E[1] + (E[4] - E[1]) * f;
+      SP[j + 2] = SQ[j + 2] = E[2] + (E[5] - E[2]) * f;
+    }
+  }
+  function buildStrands() {
+    updateWorld();
+    strands = [];
+    NP = links.length > 900 ? 5 : 6;
+    const want = links.map((l) => 1 + Math.min(5, Math.floor(Math.log2(l.refs || 1))));
+    const total = want.reduce((a, b) => a + b, 0);
+    const scale = total > STRAND_CAP ? STRAND_CAP / total : 1; // huge repos: thin the hair, keep one per link
+    links.forEach((l, li) => {
+      const k = Math.max(1, Math.round(want[li] * scale));
+      for (let j = 0; j < k; j++) {
+        const a = rndUnit(), b = rndUnit();
+        strands.push({ l, ax: a[0], ay: a[1], az: a[2], bx: b[0], by: b[1], bz: b[2], first: j === 0,
+                       spread: j === 0 ? 0.2 : 0.45 + Math.random() * 0.55, ph: Math.random() });
+      }
+    });
+    const P = strands.length * NP;
+    SP = new Float32Array(P * 3); SQ = new Float32Array(P * 3);
+    SX = new Float32Array(P); SY = new Float32Array(P);
+    strands.forEach((st, i) => { strandEnds(st); straighten(i * NP * 3); });
+  }
+  function stepStrands() {
+    const ITER = strands.length > 1500 ? 1 : 2;
+    for (let i = 0; i < strands.length; i++) {
+      const st = strands[i];
+      if (!visible(st.l.s) || !visible(st.l.t)) continue;
+      strandEnds(st);
+      const o = i * NP * 3, e = o + (NP - 1) * 3;
+      if (!physics) { straighten(o); continue; }
+      SP[o] = SQ[o] = E[0]; SP[o + 1] = SQ[o + 1] = E[1]; SP[o + 2] = SQ[o + 2] = E[2];
+      SP[e] = SQ[e] = E[3]; SP[e + 1] = SQ[e + 1] = E[4]; SP[e + 2] = SQ[e + 2] = E[5];
+      const ex = E[3] - E[0], ey = E[4] - E[1], ez = E[5] - E[2];
+      const rest = Math.sqrt(ex * ex + ey * ey + ez * ez) * SLACK / (NP - 1);
+      const wph = T * 0.8 + st.ph * 6.283;
+      for (let k = 1; k < NP - 1; k++) {
+        const j = o + k * 3;
+        const vx = (SP[j] - SQ[j]) * DAMP, vy = (SP[j + 1] - SQ[j + 1]) * DAMP, vz = (SP[j + 2] - SQ[j + 2]) * DAMP;
+        SQ[j] = SP[j]; SQ[j + 1] = SP[j + 1]; SQ[j + 2] = SP[j + 2];
+        // each strand bows out along its own random direction, so a bundle fans out like hair
+        const bow = Math.sin(Math.PI * k / (NP - 1)) * BOW;
+        SP[j] += vx + st.ax * bow + Math.sin(wph + k) * 0.012;
+        SP[j + 1] += vy + st.ay * bow + GRAV;
+        SP[j + 2] += vz + st.az * bow + Math.cos(wph * 0.7 + k) * 0.012;
+      }
+      for (let it = 0; it < ITER; it++) {
+        for (let k = 0; k < NP - 1; k++) {
+          const j = o + k * 3, j2 = j + 3;
+          const dx = SP[j2] - SP[j], dy = SP[j2 + 1] - SP[j + 1], dz = SP[j2 + 2] - SP[j + 2];
+          const d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1e-6;
+          const diff = (d - rest) / d;
+          const wa = k === 0 ? 0 : (k === NP - 2 ? 1 : 0.5), wb = k === 0 ? 1 : (k === NP - 2 ? 0 : 0.5);
+          SP[j] += dx * diff * wa; SP[j + 1] += dy * diff * wa; SP[j + 2] += dz * diff * wa;
+          SP[j2] -= dx * diff * wb; SP[j2 + 1] -= dy * diff * wb; SP[j2 + 2] -= dz * diff * wb;
+        }
+      }
+    }
+  }
+
+  // ---------- WebGL renderer ----------
+  // Everything drawn in bulk (background, confetti, strands, pulses, bubbles) goes through
+  // WebGL; only rings and labels use the 2D overlay canvas. WebKit (Safari and the Mac app)
+  // rasterizes canvas-2D paths on the CPU, which made thousands of strands slow on Retina.
+  const glCanvas = $("gl");
+  const gl = glCanvas.getContext("webgl", { alpha: false, antialias: false, depth: false, stencil: false,
+                                            powerPreference: "high-performance" });
+  if (!gl) {
+    document.body.innerHTML = '<p style="padding:40px;font:14px sans-serif;color:#e8ecff">Code Room needs WebGL, which is turned off in this browser.</p>';
+    throw new Error("WebGL unavailable");
+  }
+
+  function program(vs, fs) {
+    const p = gl.createProgram();
+    for (const [type, src] of [[gl.VERTEX_SHADER, vs], [gl.FRAGMENT_SHADER, fs]]) {
+      const s = gl.createShader(type);
+      gl.shaderSource(s, src); gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+      gl.attachShader(p, s);
+    }
+    gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+    const loc = {};
+    for (let i = 0; i < gl.getProgramParameter(p, gl.ACTIVE_ATTRIBUTES); i++) { const a = gl.getActiveAttrib(p, i); loc[a.name] = gl.getAttribLocation(p, a.name); }
+    for (let i = 0; i < gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS); i++) { const u = gl.getActiveUniform(p, i); loc[u.name] = gl.getUniformLocation(p, u.name); }
+    return { p, loc };
+  }
+  const HIGHP = "#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\n";
+  const SCREEN_VS = "uniform vec2 u_res;\nvec4 clip(vec2 p) { vec2 c = p / u_res * 2.0 - 1.0; return vec4(c.x, -c.y, 0.0, 1.0); }\n";
+  // strands & rings: each segment is a quad; a gaussian across its width gives a soft glowing line
+  const lineProg = program(SCREEN_VS + `
+    attribute vec2 a_pos; attribute float a_side; attribute vec4 a_col;
+    varying float v_side; varying vec4 v_col;
+    void main() { v_side = a_side; v_col = a_col; gl_Position = clip(a_pos); }`, HIGHP + `
+    varying float v_side; varying vec4 v_col;
+    void main() { float f = exp(-v_side * v_side * 4.5) * v_col.a; gl_FragColor = vec4(v_col.rgb * f, f); }`);
+  // bubbles, confetti and pulses: textured or procedural quads, picked by a_mode
+  const spriteProg = program(SCREEN_VS + `
+    attribute vec2 a_pos; attribute vec2 a_uv; attribute float a_mode; attribute vec4 a_col;
+    varying vec2 v_uv; varying float v_mode; varying vec4 v_col; varying vec2 v_pos;
+    void main() { v_uv = a_uv; v_mode = a_mode; v_col = a_col; v_pos = a_pos; gl_Position = clip(a_pos); }`, HIGHP + `
+    varying vec2 v_uv; varying float v_mode; varying vec4 v_col; varying vec2 v_pos;
+    uniform sampler2D u_spr; uniform sampler2D u_code0; uniform sampler2D u_code1;
+    uniform vec4 u_lpos[4];   // moving lights: x, y (px), height in front of the scene (px), reach (px)
+    uniform vec4 u_lcol[4];   // their colour and intensity
+    void main() {
+      if (v_mode < 0.5) {                       // dark core disk behind each bubble
+        float a = v_col.a * (1.0 - smoothstep(0.92, 1.0, length(v_uv * 2.0 - 1.0)));
+        gl_FragColor = vec4(v_col.rgb * a, a);
+      } else if (v_mode < 1.5) { gl_FragColor = texture2D(u_code0, v_uv) * v_col.a; }
+      else if (v_mode < 2.5) { gl_FragColor = texture2D(u_code1, v_uv) * v_col.a; }
+      else if (v_mode < 3.5) { gl_FragColor = texture2D(u_spr, v_uv) * v_col.a; }
+      else if (v_mode < 4.5) {                  // glowing data pulse
+        float g = max(0.0, 1.0 - length(v_uv * 2.0 - 1.0)), a = v_col.a * g * g;
+        gl_FragColor = vec4(mix(v_col.rgb, vec3(1.0), smoothstep(0.55, 1.0, g)) * a, a);
+      } else if (v_mode < 5.5) { gl_FragColor = vec4(v_col.rgb * v_col.a, v_col.a); }   // flat confetti rectangle
+      else {                                    // light on a bubble: rims and glints from the moving lights, and its own glow
+        vec2 q = v_uv * 2.0 - 1.0;
+        float r = length(q) * 1.3;              // the quad is 1.3 radii wide: room for a glow past the rim
+        vec3 c = vec3(0.0);
+        if (r < 1.0) {
+          vec3 n = vec3(q * 1.3, sqrt(max(0.0, 1.0 - r * r)));
+          for (int i = 0; i < 4; i++) {
+            vec3 L = vec3(u_lpos[i].xy - v_pos, u_lpos[i].z);
+            float d = length(L.xy) / u_lpos[i].w, att = u_lcol[i].a / (1.0 + d * d);
+            L = normalize(L);
+            float rim = pow(1.0 - n.z, 2.5) * max(dot(normalize(n.xy + 1e-4), normalize(L.xy + 1e-4)), 0.0);
+            float spec = pow(max(dot(n, normalize(L + vec3(0.0, 0.0, 1.0))), 0.0), 36.0);
+            c += u_lcol[i].rgb * att * (0.7 * rim + 0.85 * spec + 0.05 * max(dot(n, L), 0.0));
+          }
+          c += v_col.rgb * (0.12 + 0.75 * r * r * r);
+        } else c = v_col.rgb * exp(-(r - 1.0) * 9.0) * 0.6;
+        gl_FragColor = vec4(c * v_col.a, 0.0);  // pure light: adds without covering
+      }
+    }`);
+  // background: the void's gradient, the atmosphere (fog, smog and light shafts, rendered small and
+  // upsampled) and the glow of the wandering light, in one dithered pass
+  const FULL_VS = `attribute vec2 a_pos; void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }`;
+  const bgProg = program(FULL_VS, HIGHP + `
+    uniform vec2 u_res; uniform float u_scale; uniform sampler2D u_atm;
+    uniform vec4 u_wander; uniform vec3 u_wanderCol;   // x, y (px), radius (px), intensity
+    void main() {
+      vec2 p = vec2(gl_FragCoord.x, u_res.y * u_scale - gl_FragCoord.y) / u_scale;
+      float m = max(u_res.x, u_res.y);
+      float t = clamp(length(p - vec2(u_res.x * 0.5, u_res.y * 0.45)) / (m * 0.8), 0.0, 1.0);
+      vec3 a = vec3(0.090, 0.102, 0.322), b = vec3(0.047, 0.039, 0.173), c = vec3(0.016, 0.008, 0.047);
+      vec3 col = t < 0.5 ? mix(a, b, t * 2.0) : mix(b, c, t * 2.0 - 1.0);
+      col += texture2D(u_atm, gl_FragCoord.xy / (u_res * u_scale)).rgb;
+      vec2 dw = (p - u_wander.xy) / max(1.0, u_wander.z);
+      col += u_wanderCol * (exp(-dot(dw, dw)) + 0.25 * exp(-sqrt(dot(dw, dw)) * 2.0)) * u_wander.w;
+      col += (fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5) / 255.0;   // no banding
+      gl_FragColor = vec4(col, 1.0);
+    }`);
+  // ---------- atmosphere ----------
+  // emit (a quarter-size target): r = the light core, g = the sky light (a band of beams along the top
+  //   edge), b = fog density (domain-warped noise drifting slowly; smog pooling toward the floor).
+  //   Every bubble is then drawn over r and g as a dark disc.
+  // scatter (same size): each pixel marches toward the core and toward the sky light gathering what
+  //   shines through the gaps between the bubbles; the fog takes that light in and glows with it.
+  //   rgb lights the background, a is the fog that lies faintly over the bubbles too.
+  const NOISE = `
+    float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float vnoise(vec2 p) {
+      vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+      return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+    }
+    float fbm(vec2 p) { float v = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { v += a * vnoise(p); p = p * 2.03 + vec2(17.1, 9.2); a *= 0.5; } return v; }`;
+  const atmEmitProg = program(FULL_VS, HIGHP + NOISE + `
+    uniform vec2 u_res; uniform vec2 u_size; uniform float u_time; uniform vec2 u_drift;
+    uniform vec4 u_core; uniform vec3 u_sky;
+    float shafts(float a, float t) {           // a fan of soft beams that drift and shimmer
+      float s = pow(0.5 + 0.5 * sin(a * 9.0 + t * 0.11 + 1.5 * sin(a * 4.0 - t * 0.05)), 4.0);
+      s += 0.6 * pow(0.5 + 0.5 * sin(a * 17.0 - t * 0.17 + 0.8), 6.0);
+      return s + 0.4 * pow(0.5 + 0.5 * sin(a * 29.0 + t * 0.23 + 2.3), 8.0);
+    }
+    void main() {
+      vec2 uv = gl_FragCoord.xy / u_size, p = vec2(uv.x, 1.0 - uv.y) * u_res;
+      float m = max(u_res.x, u_res.y);
+      vec2 dc = (p - u_core.xy) / max(8.0, u_core.z * 0.32);
+      float core = exp(-dot(dc, dc)) * u_core.w;
+      vec2 ds = p - u_sky.xy; float ang = atan(ds.x, ds.y);
+      float sky = shafts(ang * 1.6, u_time) * exp(-ang * ang * 2.4) * exp(-max(0.0, p.y) / (0.09 * m)) * u_sky.z;
+      vec2 q = p / m * 2.4 + u_drift;
+      float f1 = fbm(q + vec2(u_time * 0.011, u_time * 0.003));
+      float f2 = fbm(q * 1.8 + vec2(-u_time * 0.017, u_time * 0.005) + f1 * 1.7);
+      float low = smoothstep(0.35, 1.05, p.y / u_res.y);
+      float dens = smoothstep(0.32, 0.95, f1 * 0.55 + f2 * 0.55) * (0.45 + 0.9 * low) + low * low * 0.22;
+      gl_FragColor = vec4(core, sky, clamp(dens, 0.0, 1.0), 1.0);
+    }`);
+  const atmScatterProg = program(FULL_VS, HIGHP + `
+    uniform sampler2D u_a; uniform vec2 u_size; uniform vec2 u_coreUV; uniform vec2 u_skyUV;
+    uniform vec3 u_coreCol; uniform vec3 u_skyCol; uniform float u_fog;
+    void main() {
+      vec2 uv = gl_FragCoord.xy / u_size;
+      vec2 d1 = (u_coreUV - uv) * 0.025, d2 = (u_skyUV - uv) * 0.025, s1 = uv, s2 = uv;
+      float a1 = 0.0, a2 = 0.0, w = 1.0;
+      for (int i = 0; i < 36; i++) { s1 += d1; s2 += d2; a1 += texture2D(u_a, s1).r * w; a2 += texture2D(u_a, s2).g * w; w *= 0.955; }
+      vec4 here = texture2D(u_a, uv);
+      float dens = here.b, low = smoothstep(0.35, 1.05, 1.0 - uv.y);
+      vec3 beams = u_coreCol * (a1 / 16.0 + here.r * 0.5) + u_skyCol * a2 / 14.0;
+      vec3 haze = mix(vec3(0.30, 0.28, 0.62), vec3(0.22, 0.42, 0.44), low);   // violet fog above, teal smog below
+      gl_FragColor = vec4(beams * (0.3 + 1.1 * dens) + haze * dens * u_fog, dens);
+    }`);
+  // the fog in front: a thin veil of the same atmosphere laid over everything drawn so far
+  const fogFrontProg = program(FULL_VS, HIGHP + `
+    uniform sampler2D u_atm; uniform vec2 u_px; uniform float u_amt;
+    void main() {
+      vec4 atm = texture2D(u_atm, gl_FragCoord.xy / u_px);
+      float a = atm.a * u_amt;
+      gl_FragColor = vec4((vec3(0.16, 0.15, 0.32) + atm.rgb * 0.9) * a, a);
+    }`);
+
+  // quad batches: interleaved float attributes + one RGBA byte colour per vertex
+  const MAX_QUADS = 16000;
+  const quadIndex = gl.createBuffer();
+  {
+    const idx = new Uint16Array(MAX_QUADS * 6);
+    for (let q = 0; q < MAX_QUADS; q++) {
+      const v = q * 4, o = q * 6;
+      idx[o] = v; idx[o + 1] = v + 1; idx[o + 2] = v + 2; idx[o + 3] = v + 1; idx[o + 4] = v + 3; idx[o + 5] = v + 2;
+    }
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quadIndex);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
+  }
+  function makeBatch(prog, floats, layout) {
+    const stride = (floats + 1) * 4, buf = new ArrayBuffer(MAX_QUADS * 4 * stride);
+    return { prog, stride, layout, f32: new Float32Array(buf), u8: new Uint8Array(buf), vbo: gl.createBuffer(), quads: 0 };
+  }
+  const lines = makeBatch(lineProg, 3, [["a_pos", 2, 0], ["a_side", 1, 8]]);
+  const quads = makeBatch(spriteProg, 5, [["a_pos", 2, 0], ["a_uv", 2, 8], ["a_mode", 1, 16]]);
+  function flush(b) {
+    if (!b.quads) return;
+    const P = b.prog, used = [];
+    gl.useProgram(P.p);
+    gl.bindBuffer(gl.ARRAY_BUFFER, b.vbo);
+    gl.bufferData(gl.ARRAY_BUFFER, b.u8.subarray(0, b.quads * 4 * b.stride), gl.STREAM_DRAW);
+    for (const [name, size, off] of b.layout) {
+      const l = P.loc[name];
+      if (l === undefined || l < 0) continue;
+      gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, size, gl.FLOAT, false, b.stride, off); used.push(l);
+    }
+    const lc = P.loc.a_col;
+    gl.enableVertexAttribArray(lc); gl.vertexAttribPointer(lc, 4, gl.UNSIGNED_BYTE, true, b.stride, b.stride - 4); used.push(lc);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quadIndex);
+    gl.drawElements(gl.TRIANGLES, b.quads * 6, gl.UNSIGNED_SHORT, 0);
+    for (const l of used) gl.disableVertexAttribArray(l);
+    b.quads = 0;
+  }
+
+  let cr = 0, cg = 0, cb = 0, ca = 0; // current vertex colour, as bytes
+  const rgbCache = new Map();
+  const hexRGB = (hex) => { let c = rgbCache.get(hex); if (!c) { const v = parseInt(hex.slice(1), 16); c = [v >> 16, (v >> 8) & 255, v & 255]; rgbCache.set(hex, c); } return c; };
+  const CYAN = [79, 243, 255], PINK = [255, 95, 210];
+  function setColor(hex, a) {
+    let c = rgbCache.get(hex);
+    if (!c) { const v = parseInt(hex.slice(1), 16); c = [v >> 16, (v >> 8) & 255, v & 255]; rgbCache.set(hex, c); }
+    cr = c[0]; cg = c[1]; cb = c[2]; ca = a <= 0 ? 0 : a >= 1 ? 255 : (a * 255) | 0;
+  }
+  function lineSeg(x0, y0, x1, y1, hw) {
+    const b = lines;
+    if (b.quads >= MAX_QUADS) flush(b);
+    const dx = x1 - x0, dy = y1 - y0, len = Math.sqrt(dx * dx + dy * dy) || 1e-3;
+    const nx = -dy / len * hw, ny = dx / len * hw;
+    const f = b.f32, u = b.u8, v = b.quads * 4, o = v * 4;
+    f[o] = x0 + nx; f[o + 1] = y0 + ny; f[o + 2] = 1;
+    f[o + 4] = x0 - nx; f[o + 5] = y0 - ny; f[o + 6] = -1;
+    f[o + 8] = x1 + nx; f[o + 9] = y1 + ny; f[o + 10] = 1;
+    f[o + 12] = x1 - nx; f[o + 13] = y1 - ny; f[o + 14] = -1;
+    for (let k = 0, ub = v * 16 + 12; k < 4; k++, ub += 16) { u[ub] = cr; u[ub + 1] = cg; u[ub + 2] = cb; u[ub + 3] = ca; }
+    b.quads++;
+  }
+  function quad(x0, y0, x1, y1, u0, v0, u1, v1, mode) {
+    const b = quads;
+    if (b.quads >= MAX_QUADS) flush(b);
+    const f = b.f32, u = b.u8, v = b.quads * 4, o = v * 6;
+    f[o] = x0; f[o + 1] = y0; f[o + 2] = u0; f[o + 3] = v0; f[o + 4] = mode;
+    f[o + 6] = x0; f[o + 7] = y1; f[o + 8] = u0; f[o + 9] = v1; f[o + 10] = mode;
+    f[o + 12] = x1; f[o + 13] = y0; f[o + 14] = u1; f[o + 15] = v0; f[o + 16] = mode;
+    f[o + 18] = x1; f[o + 19] = y1; f[o + 20] = u1; f[o + 21] = v1; f[o + 22] = mode;
+    for (let k = 0, ub = v * 24 + 20; k < 4; k++, ub += 24) { u[ub] = cr; u[ub + 1] = cg; u[ub + 2] = cb; u[ub + 3] = ca; }
+    b.quads++;
+  }
+
+  const bgBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, bgBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  function fullscreen(P) {
+    gl.bindBuffer(gl.ARRAY_BUFFER, bgBuf);
+    const l = P.loc.a_pos;
+    gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, 2, gl.FLOAT, false, 0, 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.disableVertexAttribArray(l);
+  }
+  function drawBackground() {
+    gl.useProgram(bgProg.p);
+    const L = bgProg.loc;
+    gl.uniform1i(L.u_atm, 5);
+    gl.uniform4f(L.u_wander, wander.sx, wander.sy, wander.r, wander.vis ? wander.glow : 0);
+    gl.uniform3f(L.u_wanderCol, wander.c[0], wander.c[1], wander.c[2]);
+    fullscreen(bgProg);
+  }
+  // two small render targets for the atmosphere (texture units 4 and 5), sized with the canvas
+  function target(unit) {
+    const tex = makeTexture(4, 4, unit), fb = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    return { fb, tex, unit, w: 4, h: 4 };
+  }
+  function sizeTarget(tg, w, h) {
+    if (tg.w === w && tg.h === h) return;
+    gl.activeTexture(gl.TEXTURE0 + tg.unit); gl.bindTexture(gl.TEXTURE_2D, tg.tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.activeTexture(gl.TEXTURE3);
+    tg.w = w; tg.h = h;
+  }
+  let atmA = null, atmB = null;
+  function drawAtmosphere(order) {
+    const aw = Math.max(64, Math.round(glCanvas.width / 4)), ah = Math.max(64, Math.round(glCanvas.height / 4));
+    sizeTarget(atmA, aw, ah); sizeTarget(atmB, aw, ah);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, atmA.fb); gl.viewport(0, 0, aw, ah);
+    gl.disable(gl.BLEND);
+    gl.useProgram(atmEmitProg.p);
+    let L = atmEmitProg.loc;
+    gl.uniform2f(L.u_res, W, H); gl.uniform2f(L.u_size, aw, ah); gl.uniform1f(L.u_time, T);
+    gl.uniform2f(L.u_drift, cam.yaw * 0.35, cam.pitch * 0.5);                // the fog drifts past as the camera turns
+    gl.uniform4f(L.u_core, light.sx, light.sy, light.r, light.vis ? light.core * (1 + 0.6 * light.kick) : 0);
+    gl.uniform3f(L.u_sky, light.skyX, light.skyY, light.sky);
+    fullscreen(atmEmitProg);
+    // the bubbles stand in the light's way
+    gl.enable(gl.BLEND); gl.blendFunc(gl.ZERO, gl.ONE_MINUS_SRC_ALPHA); gl.colorMask(true, true, false, false);
+    for (const n of order) {
+      const p = proj[n.i], R = n.r * n.bs * sizeScale * p.s;
+      if (R < 1.5) continue;
+      setColor("#000000", Math.min(0.92, p.a * Math.min(1, n.bl * 2)));
+      quad(p.sx - R, p.sy - R, p.sx + R, p.sy + R, 0, 0, 1, 1, 0);
+    }
+    flush(quads);
+    gl.colorMask(true, true, true, true);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, atmB.fb);
+    gl.disable(gl.BLEND);
+    gl.useProgram(atmScatterProg.p);
+    L = atmScatterProg.loc;
+    gl.uniform1i(L.u_a, 4); gl.uniform2f(L.u_size, aw, ah);
+    gl.uniform2f(L.u_coreUV, light.sx / W, 1 - light.sy / H); gl.uniform2f(L.u_skyUV, light.skyX / W, 1 - light.skyY / H);
+    gl.uniform3f(L.u_coreCol, light.cr, light.cg, light.cb); gl.uniform3f(L.u_skyCol, 0.48, 0.55, 1.0);
+    gl.uniform1f(L.u_fog, 0.55 + 0.25 * musicLevel);
+    fullscreen(atmScatterProg);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, glCanvas.width, glCanvas.height);
+  }
+  function drawFrontFog() {
+    gl.useProgram(fogFrontProg.p);
+    const L = fogFrontProg.loc;
+    gl.uniform1i(L.u_atm, 5); gl.uniform2f(L.u_px, glCanvas.width, glCanvas.height); gl.uniform1f(L.u_amt, 0.3);
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    fullscreen(fogFrontProg);
+  }
+
+  // ---------- textures: bubble sprites and wrapped-code atlases ----------
+  const SPR = 256, BODY = 76;
+  gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+  function makeTexture(w, h, unit) {
+    const t = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    return t;
+  }
+  const ATLAS = 2048;
+  const sprAtlas = { tex: makeTexture(2048, 512, 0), canvas: Object.assign(document.createElement("canvas"), { width: 2048, height: 512 }), cells: new Map() };
+  const codeAtlases = [
+    { tex: makeTexture(ATLAS, ATLAS, 1), cell: 160, per: 12, mode: 1, slots: new Map(), free: [] },
+    { tex: makeTexture(ATLAS, ATLAS, 2), cell: 256, per: 8, mode: 2, slots: new Map(), free: [] },
+  ];
+  function resetAtlases() {
+    for (const A of codeAtlases) { A.slots.clear(); A.free = Array.from({ length: A.per * A.per }, (_, i) => A.per * A.per - 1 - i); }
+  }
+  resetAtlases();
+  gl.useProgram(spriteProg.p);
+  gl.uniform1i(spriteProg.loc.u_spr, 0); gl.uniform1i(spriteProg.loc.u_code0, 1); gl.uniform1i(spriteProg.loc.u_code1, 2);
+  atmA = target(4); atmB = target(5);
+  gl.activeTexture(gl.TEXTURE3); // uploads use a spare unit so units 0-2 stay bound to the atlases (4-5: atmosphere)
+
+  function makeSprite(color) {
+    const c = document.createElement("canvas"); c.width = c.height = SPR;
+    const g = c.getContext("2d"), m = SPR / 2;
+    let gr = g.createRadialGradient(m, m, BODY * 0.8, m, m, m);
+    gr.addColorStop(0, hexA(color, 0.4)); gr.addColorStop(1, hexA(color, 0));
+    g.fillStyle = gr; g.fillRect(0, 0, SPR, SPR);
+    const u = SPR / 128;
+    gr = g.createRadialGradient(m - 8 * u, m - 10 * u, 2 * u, m, m, BODY);
+    gr.addColorStop(0, hexA(color, 0.04)); gr.addColorStop(0.72, hexA(color, 0.16));
+    gr.addColorStop(0.94, hexA(color, 0.9)); gr.addColorStop(1, hexA(color, 0.35));
+    g.fillStyle = gr; g.beginPath(); g.arc(m, m, BODY, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = hexA("#ffffff", 0.4); g.lineWidth = 1.2 * u; g.beginPath(); g.arc(m, m, BODY - 0.6 * u, 0, Math.PI * 2); g.stroke();
+    gr = g.createRadialGradient(m - 13 * u, m - 15 * u, 0, m - 13 * u, m - 15 * u, 15 * u);
+    gr.addColorStop(0, "rgba(255,255,255,0.8)"); gr.addColorStop(1, "rgba(255,255,255,0)");
+    g.fillStyle = gr; g.beginPath(); g.ellipse(m - 13 * u, m - 15 * u, 14 * u, 9 * u, -0.7, 0, Math.PI * 2); g.fill();
+    g.fillStyle = "rgba(255,255,255,0.35)"; g.beginPath(); g.ellipse(m + 16 * u, m + 18 * u, 5 * u, 2.5 * u, -0.7, 0, Math.PI * 2); g.fill();
+    return c;
+  }
+  function spriteCell(color) {
+    let cell = sprAtlas.cells.get(color);
+    if (cell) return cell;
+    const i = sprAtlas.cells.size % 16, x = (i % 8) * SPR, y = Math.floor(i / 8) * SPR;
+    const g = sprAtlas.canvas.getContext("2d");
+    g.clearRect(x, y, SPR, SPR); g.drawImage(makeSprite(color), x, y);
+    gl.bindTexture(gl.TEXTURE_2D, sprAtlas.tex);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, sprAtlas.canvas);
+    cell = { u0: x / 2048, v0: y / 512, u1: (x + SPR) / 2048, v1: (y + SPR) / 512 };
+    sprAtlas.cells.set(color, cell);
+    return cell;
+  }
+
+  // code wrapped around the inside of each bubble: drawn lazily into an LRU atlas slot
+  const scratch = {};
+  function renderCode(n, S) {
+    let c = scratch[S];
+    if (!c) { c = scratch[S] = document.createElement("canvas"); c.width = c.height = S; }
+    const g = c.getContext("2d"), m = S / 2, R = m - 1;
+    g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.clearRect(0, 0, S, S);
+    g.save();
+    g.beginPath(); g.arc(m, m, R, 0, Math.PI * 2); g.clip();
+    const gr = g.createRadialGradient(m, m, 0, m, m, R);
+    gr.addColorStop(0, hexA(n.color, 0.12)); gr.addColorStop(1, "rgba(0,0,0,0.45)");
+    g.fillStyle = gr; g.fillRect(0, 0, S, S);
+    let rows = (n.preview || "").split("\n").map((s) => s.replace(/\t/g, "  ")).filter((s) => s.trim());
+    if (n.funcs === 0 || rows.length < 4) {
+      rows = Array.from({ length: 24 }, () => Array.from({ length: 30 }, () => (Math.random() < 0.5 ? "0" : "1")).join(" "));
+    } else {
+      rows = rows.concat(n.functions.slice(0, 30).map((f) => f + "() {"));
+    }
+    const fs = S / 21, lh = fs * 1.15;
+    g.font = `600 ${fs}px "JetBrains Mono", monospace`; g.textBaseline = "middle";
+    g.fillStyle = mixWhite(n.color, 0.35);
+    for (let y = -R + lh, k = 0; y < R - lh / 2; y += lh, k++) {
+      const w = Math.sqrt(1 - (y / R) ** 2); // squeeze toward the rim so the text reads as wrapped on a sphere
+      g.setTransform(w, 0, 0, 1, m, m + y);
+      g.globalAlpha = 0.25 + 0.6 * w;
+      g.fillText(rows[k % rows.length], -R * 0.92, 0);
+    }
+    g.restore();
+    return c;
+  }
+  let texBudget = 0;
+  function codeSlot(n) {
+    const A = codeAtlases[n.r > 24 ? 1 : 0];
+    let s = A.slots.get(n.id);
+    if (s && s.hash === n.hash && s.color === n.color) { A.slots.delete(n.id); A.slots.set(n.id, s); return s; }
+    if (texBudget-- <= 0) return s || null;
+    let slot = s ? s.slot : A.free.length ? A.free.pop() : null;
+    if (slot === null) { const oldest = A.slots.keys().next().value; slot = A.slots.get(oldest).slot; A.slots.delete(oldest); }
+    const x = (slot % A.per) * A.cell, y = Math.floor(slot / A.per) * A.cell;
+    gl.bindTexture(gl.TEXTURE_2D, A.tex);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, x, y, gl.RGBA, gl.UNSIGNED_BYTE, renderCode(n, A.cell));
+    s = { slot, hash: n.hash, color: n.color, mode: A.mode,
+          u0: x / ATLAS, v0: y / ATLAS, u1: (x + A.cell) / ATLAS, v1: (y + A.cell) / ATLAS };
+    A.slots.delete(n.id); A.slots.set(n.id, s);
+    return s;
+  }
+
+  // ---------- merge a fresh scan into the live scene ----------
+  function applyGraph(G) {
+    const first = nodes.length === 0;
+    const old = byId;
+    const next = G.nodes.map((d, i) => {
+      const prev = old.get(d.id);
+      const n = prev || { phase: Math.random() * Math.PI * 2, vx: 0, vy: 0, vz: 0 };
+      const changed = !!prev && prev.hash !== d.hash;
+      Object.assign(n, d, { i, out: [], inc: [], outL: [], incL: [], changed, added: !first && !prev });
+      return n;
+    });
+    const nextById = new Map(next.map((n) => [n.id, n]));
+    const removed = [...old.values()].filter((n) => !nextById.has(n.id));
+    const oldLinkKeys = new Set(links.map((l) => l.s.id + ">" + l.t.id));
+    const nextLinks = G.links.map((l) => ({ s: nextById.get(l.source), t: nextById.get(l.target), count: l.count, refs: l.refs || 1, via: l.via }))
+                             .filter((l) => l.s && l.t);
+    for (const l of nextLinks) { l.s.out.push(l.t); l.t.inc.push(l.s); l.s.outL.push(l); l.t.incL.push(l); }
+    for (const n of next) { n.outSet = new Set(n.out); n.incSet = new Set(n.inc); }
+    const newLinkKeys = new Set(nextLinks.map((l) => l.s.id + ">" + l.t.id));
+    const linksAdded = [...newLinkKeys].filter((k) => !oldLinkKeys.has(k)).length;
+    const linksRemoved = [...oldLinkKeys].filter((k) => !newLinkKeys.has(k)).length;
+
+    // groups: colours and anchors stay stable across rescans; bigger repos get a bigger room
+    groupCounts = {};
+    for (const n of next) groupCounts[n.group] = (groupCounts[n.group] || 0) + 1;
+    groups = Object.keys(groupCounts).sort((a, b) => groupCounts[b] - groupCounts[a]);
+    if (first) LS = Math.max(1, Math.min(3.5, Math.sqrt(next.length / 260)));
+    groups.forEach((g, i) => {
+      if (!groupColor[g]) groupColor[g] = PALETTE[Object.keys(groupColor).length % PALETTE.length];
+      spriteCell(groupColor[g]);
+      if (!anchors[g]) {
+        const k = groups.length, y = 1 - (i + 0.5) * 2 / k, rr = Math.sqrt(1 - y * y), th = i * 2.39996;
+        anchors[g] = { x: Math.cos(th) * rr * 320 * LS, y: y * 210 * LS, z: Math.sin(th) * rr * 320 * LS };
+      }
+    });
+
+    for (const n of next) {
+      n.r = radiusOf(n);
+      n.color = groupColor[n.group];
+      if (n.x === undefined) {
+        // spawn beside something it imports, else at its folder's anchor
+        const near = n.out.find((d) => d.x !== undefined) || anchors[n.group];
+        const jitter = first ? 160 * LS : 60;
+        n.x = near.x + (Math.random() - 0.5) * jitter; n.y = near.y + (Math.random() - 0.5) * jitter; n.z = near.z + (Math.random() - 0.5) * jitter;
+      }
+      n.born = n.added ? T : -10;
+      if (n.added || n.changed) n.flash = { color: n.added ? "#7dff6a" : "#ffe14f", until: T + 6 };
+    }
+
+    nodes = next; byId = nextById; links = nextLinks;
+    proj = nodes.map(() => ({}));
+    bigNodes = new Set([...nodes].sort((a, b) => b.funcs - a.funcs).slice(0, 8));
+    alpha = first ? 1 : Math.max(alpha, 0.25);
+    if (first) for (let i = 0; i < (nodes.length > 1500 ? 20 : 80); i++) tick();
+    const bloomCues = first ? startBloom() : null;
+    buildStrands();
+
+    const totalLoc = nodes.reduce((a, n) => a + n.loc, 0), totalFn = nodes.reduce((a, n) => a + n.funcs, 0);
+    const langs = Object.entries(G.languages || {}).slice(0, 3).map(([k, v]) => `${k} ${v}`).join(" · ");
+    $("stats").textContent = `${nodes.length.toLocaleString()} modules · ${totalFn.toLocaleString()} functions · ${links.length.toLocaleString()} links · ${totalLoc.toLocaleString()} lines` + (langs ? ` — ${langs}` : "");
+    $("scanned").textContent = "scanned " + new Date(G.scannedAt * 1000).toLocaleTimeString();
+    $("scanned").title = G.root;
+    buildLegend();
+
+    if (selected) { const s = byId.get(selected.id); select(s && visible(s) ? s : null, true); }
+    if (q.value) q.dispatchEvent(new Event("input"));
+
+    updateFit();
+    if (first) {
+      settle(5000);
+      if (nodes.length) SFX.boot({ modules: nodes.length, bloom: bloomCues });
+      if (!nodes.length) toast("No supported source files in this folder.");
+      else if (G.truncated) toast(`Big repository: showing the first ${G.fileCount.toLocaleString()} source files.`);
+    } else {
+      const changed = nodes.filter((n) => n.changed).length, added = nodes.filter((n) => n.added).length;
+      const parts = [];
+      if (added) parts.push(`<b style="color:#7dff6a">+${added}</b> new`);
+      if (removed.length) parts.push(`<b style="color:#ff5f6d">−${removed.length}</b> removed`);
+      if (changed) parts.push(`<b style="color:#ffe14f">${changed}</b> edited`);
+      if (linksAdded || linksRemoved) parts.push(`links <b style="color:#4ff3ff">+${linksAdded}</b> / <b style="color:#ff5f6d">−${linksRemoved}</b>`);
+      let html = (parts.length ? parts.join(" · ") : "No changes") + ` <small>${G.scanMs} ms</small>`;
+      if (removed.length) html += `<div class="gone">${removed.slice(0, 6).map((n) => esc(n.id)).join("<br>")}${removed.length > 6 ? "<br>…" : ""}</div>`;
+      toast(html);
+      SFX.rescanResult({ added, removed: removed.length, changed });
+    }
+  }
+
+  // forget everything about the previous repository
+  function resetScene() {
+    nodes = []; links = []; byId = new Map(); groups = []; groupCounts = {}; proj = []; bigNodes = new Set();
+    for (const k in groupColor) delete groupColor[k];
+    for (const k in anchors) delete anchors[k];
+    hiddenGroups.clear(); resetAtlases(); $("legend").innerHTML = ""; $("stats").textContent = ""; $("scanned").textContent = "";
+    strands = []; SP = new Float32Array(0); SQ = new Float32Array(0); SX = new Float32Array(0); SY = new Float32Array(0);
+    selected = hovered = dragNode = null; treeSet = matchSet = null; $("panel").classList.remove("open");
+    q.value = ""; hits = []; renderResults();
+    alpha = 1; LS = 1; userZoomed = false; bloom = null;
+    cam.dist = 2200; cam.tx = cam.ty = cam.tz = 0; goal.tx = goal.ty = goal.tz = 0; focus.x = focus.y = focus.z = 0;
+  }
+
+  let toastTimer = 0;
+  function toast(html) {
+    const t = $("toast"); t.innerHTML = html; t.classList.add("show");
+    t.style.top = document.querySelector("header").getBoundingClientRect().bottom + 6 + "px";
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 6000);
+  }
+
+  // ---------- repositories ----------
+  let scanningRoot = null;
+  async function rescan() {
+    if (!currentRoot) { showWelcome("pick"); return; }
+    if (scanningRoot === currentRoot) return;
+    const root = scanningRoot = currentRoot;
+    const btn = $("tUpdate"); btn.classList.add("busy");
+    if (nodes.length) SFX.rescanStart();
+    try {
+      const r = await fetch("api/graph?root=" + encodeURIComponent(root), { cache: "no-store" });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || `${r.status} ${r.statusText}`);
+      if (root !== currentRoot) return; // another repository was opened meanwhile
+      currentRoot = data.root; repoName = data.name;
+      $("repoName").textContent = repoName; $("repoBtn").title = data.root;
+      document.title = `${repoName} — Code Room`;
+      try { history.replaceState(null, "", "?root=" + encodeURIComponent(data.root)); } catch (_) {}
+      hideWelcome();
+      applyGraph(data);
+      refreshRecent();
+    } catch (err) {
+      const msg = String(err.message || err);
+      if (root === currentRoot && !nodes.length) showWelcome("error", msg.includes("fetch") ? "Can't reach the Code Room engine — is server.py running?" : msg);
+      else toast(`<b style="color:#ff5f6d">Scan failed</b> <small>${esc(msg)}</small>`);
+      SFX.error();
+    } finally {
+      if (scanningRoot === root) scanningRoot = null;
+      btn.classList.remove("busy");
+    }
+  }
+
+  function openRepo(path) {
+    path = String(path || "").trim();
+    if (!path) return;
+    $("repoMenu").hidden = true; $("browser").hidden = true;
+    resetScene();
+    currentRoot = path;
+    showWelcome("loading", path);
+    rescan();
+  }
+
+  async function refreshRecent() {
+    try {
+      const info = await (await fetch("api/recent", { cache: "no-store" })).json();
+      recent = info.recent || []; home = info.home || home; supported = info.languages || supported;
+      return info;
+    } catch (_) { return {}; }
+  }
+
+  function pickFolder() {
+    if (native) tell({ type: "pickFolder" });
+    else openBrowser(currentRoot ? currentRoot.replace(/\/[^/]+\/?$/, "") || "/" : home);
+  }
+
+  function renderChoices(container) {
+    container.innerHTML = "";
+    const el = document.createElement("div"); el.className = "choices";
+    container.appendChild(el);
+    const browse = document.createElement("button");
+    browse.className = "primary"; browse.textContent = native ? "Choose a folder…" : "Browse folders…";
+    browse.onclick = pickFolder;
+    el.appendChild(browse);
+    const form = document.createElement("form"); form.className = "pathform";
+    form.innerHTML = `<input type="text" placeholder="…or paste a path, e.g. ~/code/my-app" spellcheck="false" autocomplete="off"><button class="ghost" type="submit">Open</button>`;
+    form.onsubmit = (e) => { e.preventDefault(); openRepo(form.querySelector("input").value); };
+    el.appendChild(form);
+    if (recent.length) {
+      const h = document.createElement("h4"); h.textContent = "Recent"; el.appendChild(h);
+      const list = document.createElement("div"); list.className = "recent";
+      for (const r of recent.slice(0, 10)) {
+        const b = document.createElement("button");
+        b.innerHTML = `<b>${esc(r.name)}</b><small>${esc(tildify(r.path))}</small><span>${r.modules != null ? r.modules + " modules" : ""}<br>${esc((r.languages || []).slice(0, 2).join(", "))}</span>`;
+        b.onclick = () => openRepo(r.path);
+        list.appendChild(b);
+      }
+      el.appendChild(list);
+    }
+    if (native && currentRoot) {
+      const reveal = document.createElement("button"); reveal.className = "ghost"; reveal.textContent = "Show current repository in Finder";
+      reveal.onclick = () => tell({ type: "reveal", path: currentRoot });
+      el.appendChild(reveal);
+    }
+  }
+
+  function showWelcome(state, info) {
+    $("welcome").hidden = false;
+    const body = $("wBody"), sub = $("wSub");
+    body.className = ""; body.innerHTML = "";
+    if (state === "loading") {
+      sub.textContent = `Scanning ${baseName(info)}…`;
+      body.innerHTML = `<div class="spinner"></div><div class="path">${esc(tildify(info))}</div>`;
+      return;
+    }
+    if (state === "error") {
+      sub.textContent = "Couldn't open that folder.";
+      const err = document.createElement("div"); err.className = "err"; err.textContent = info; body.appendChild(err);
+    } else {
+      sub.innerHTML = "Step inside any codebase.<br>Pick a repository — every module becomes a bubble, every reference a strand.";
+    }
+    const box = document.createElement("div"); renderChoices(box); body.appendChild(box);
+    const langs = document.createElement("div"); langs.className = "langs";
+    langs.textContent = (supported.length ? "Reads " + supported.join(" · ") : "") + (native ? "  —  or drop a folder onto this window." : "");
+    body.appendChild(langs);
+  }
+  function hideWelcome() { $("welcome").hidden = true; }
+
+  // folder browser for plain-browser mode
+  let browsePath = "";
+  async function openBrowser(path) { $("browser").hidden = false; $("repoMenu").hidden = true; await loadDir(path || home || "~"); }
+  async function loadDir(path) {
+    try {
+      const r = await fetch("api/listdir?path=" + encodeURIComponent(path), { cache: "no-store" });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || r.statusText);
+      browsePath = d.path;
+      $("bPath").innerHTML = esc(tildify(d.path)) + (d.isRepo ? " &nbsp;<b>● git repository</b>" : "");
+      const list = $("bDirs"); list.innerHTML = "";
+      if (!d.dirs.length) list.innerHTML = '<div class="empty" style="padding:10px">No sub-folders.</div>';
+      for (const dir of d.dirs) {
+        const b = document.createElement("button");
+        b.innerHTML = `📁 ${esc(dir.name)}${dir.git ? '<span class="git">● git</span>' : ""}`;
+        b.title = "Click to look inside, double-click to open";
+        b.onclick = () => loadDir(dir.path);
+        b.ondblclick = () => openRepo(dir.path);
+        list.appendChild(b);
+      }
+      $("bUp").disabled = !d.parent;
+      $("bUp").onclick = () => d.parent && loadDir(d.parent);
+    } catch (err) { toast(`<b style="color:#ff5f6d">Can't list folder</b> <small>${esc(err.message || err)}</small>`); }
+  }
+  $("bOpen").onclick = () => openRepo(browsePath);
+  $("bCancel").onclick = () => { $("browser").hidden = true; };
+
+  $("repoBtn").onclick = (e) => {
+    e.stopPropagation();
+    const menu = $("repoMenu");
+    if (menu.hidden) { renderChoices(menu); menu.hidden = false; SFX.ui(true); } else menu.hidden = true;
+  };
+  $("repoMenu").addEventListener("click", (e) => { if (e.target.closest("button")) $("repoMenu").hidden = true; });
+  document.addEventListener("pointerdown", (e) => {
+    const menu = $("repoMenu");
+    if (!menu.hidden && !menu.contains(e.target) && e.target !== $("repoBtn") && !$("repoBtn").contains(e.target)) menu.hidden = true;
+  });
+
+  // hooks for the Mac app's menus, Dock and window drops
+  window.codeRoomOpen = openRepo;
+  window.codeRoomRescan = () => rescan();
+  window.codeRoomFind = () => { q.focus(); q.select(); };
+
+  // ---------- ambient confetti of code fragments ----------
+  const motes = Array.from({ length: 700 }, () => ({
+    x: (Math.random() - 0.5) * 2200, y: (Math.random() - 0.5) * 1400, z: (Math.random() - 0.5) * 2200,
+    w: Math.random() < 0.7 ? 1 + Math.random() * 6 : 1, h: 0.6 + Math.random() * 0.9,
+    v: Math.random() * 0.25 + 0.04, tw: Math.random() * 6.28,
+    c: PALETTE[(Math.random() * 8) | 0],
+  })).sort((a, b) => (a.c < b.c ? -1 : 1));
+
+  // ---------- camera ----------
+  const cam = { yaw: 0.6, pitch: 0.28, dist: 2200, tx: 0, ty: 0, tz: 0 };
+  const goal = { dist: 1050, tx: 0, ty: 0, tz: 0 };
+  let W = 0, H = 0, DPR = 1, F = 1, glScale = 2;
+  let emaMs = 16, perfMs = 0, goodMs = 0, slowChecks = 0, settleUntil = 0, fpsFrames = 0, fpsMs = 0;
+  function settle(ms = 4000) { settleUntil = performance.now() + ms; emaMs = 16; slowChecks = 0; }
+  function sizeGL() {
+    const s = Math.min(DPR, glScale);
+    glCanvas.width = Math.max(1, Math.round(W * s)); glCanvas.height = Math.max(1, Math.round(H * s));
+    gl.viewport(0, 0, glCanvas.width, glCanvas.height);
+    for (const P of [lineProg, spriteProg]) { gl.useProgram(P.p); gl.uniform2f(P.loc.u_res, W, H); }
+    gl.useProgram(bgProg.p); gl.uniform2f(bgProg.loc.u_res, W, H); gl.uniform1f(bgProg.loc.u_scale, glCanvas.width / W);
+  }
+  function resize() {
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = W * DPR; canvas.height = H * DPR;   // 2D overlay stays sharp for text
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    sizeGL();
+    settle(2000);
+    F = Math.min(W, H) * 1.1;
+  }
+  window.addEventListener("resize", resize); resize();
+  // until the viewer zooms by hand, keep the whole cloud framed as the layout breathes; while nothing
+  // is selected the camera drifts toward where the bubbles are densest (the centroid of the visible
+  // ones, pulled by a few mean-shift steps into the thickest cluster), so the orbit stays on the crowd
+  let userZoomed = false, fitDist = 1050, fitTick = 0;
+  const focus = { x: 0, y: 0, z: 0 }, focusL = { x: 0, y: 0, z: 0 };
+  let fitR = 300;
+  function updateFit() {
+    const vis = nodes.filter(visible);
+    if (!vis.length) return;
+    let fx = 0, fy = 0, fz = 0;
+    for (const n of vis) { fx += n.x; fy += n.y; fz += n.z; }
+    fx /= vis.length; fy /= vis.length; fz /= vis.length;
+    const spreadOf = (x, y, z) => vis.map((n) => Math.hypot(n.x - x, n.y - y, n.z - z) + n.r).sort((a, b) => a - b);
+    const h = Math.max(80, spreadOf(fx, fy, fz)[Math.floor(vis.length * 0.9)] * 0.55), inv = 1 / (2 * h * h);
+    for (let it = 0; it < 4; it++) {
+      let sx = 0, sy2 = 0, sz = 0, sw = 0;
+      for (const n of vis) {
+        const dx = n.x - fx, dy = n.y - fy, dz = n.z - fz, w = Math.exp(-(dx * dx + dy * dy + dz * dz) * inv);
+        sx += n.x * w; sy2 += n.y * w; sz += n.z * w; sw += w;
+      }
+      if (sw < 1e-6) break;
+      fx = sx / sw; fy = sy2 / sw; fz = sz / sw;
+    }
+    focus.x = fx * spacing; focus.y = fy * spacing; focus.z = fz * spacing;
+    const ext = spreadOf(fx, fy, fz), r90 = ext[Math.floor(ext.length * 0.9)];
+    fitR = r90; focusL.x = fx; focusL.y = fy; focusL.z = fz;
+    for (const n of nodes) n.rr = Math.hypot(n.x - fx, n.y - fy, n.z - fz);
+    fitDist = Math.max(500, r90 * (1 + F / (0.52 * Math.min(W, H))));
+  }
+
+  // ---------- lighting ----------
+  // A light core lives in the cloud: it rests on the densest cluster, swings to a selected bubble and
+  // takes on its colour, opens with the bloom and flares as each inward wave reaches the centre.
+  // High above the room a second light throws slow god rays down through the void.
+  // A wandering light circles slowly through the cloud, changing colour, and every bubble catches it
+  // (and the core, the selection and the music's notes) on its rim and in a glint: lit per pixel.
+  const light = { x: 0, y: 0, z: 0, sx: 0, sy: 0, r: 200, vis: false, core: 0, sky: 0, skyX: 0, skyY: 0, cr: 0.56, cg: 0.6, cb: 1, kick: 0 };
+  const IDLE_LIGHT = [0.56, 0.6, 1];
+  const wander = { sx: 0, sy: 0, r: 60, vis: false, glow: 0, c: [0.3, 0.95, 1] };
+  const LPOS = new Float32Array(16), LCOL = new Float32Array(16);
+  let musicLevel = 0, flutter = 0, lastBeat = -1;
+  const beats = [], noteLight = { pan: 0, v: 0 };
+  // the music moves the room: a kick sends a ripple out through the cloud, melody makes it flutter
+  function onBeat(s) {
+    if (T - lastBeat < 0.18) return;
+    lastBeat = T; beats.push({ t: T, s });
+    if (beats.length > 5) beats.shift();
+    light.kick = Math.max(light.kick, s);
+  }
+  function listen(dt) {
+    const lv = SFX.levels && SFX.levels();
+    if (lv) { musicLevel = lv.music || 0; if (lv.beat) onBeat(0.8 * lv.beat); }
+    const due = SFX.notesDue && SFX.notesDue();
+    if (due) for (const e of due) {
+      if (e.drum) onBeat(0.35 + 0.65 * e.v);
+      else { flutter = Math.min(1, flutter + 0.1 * e.v); noteLight.pan = [-0.6, 0.6, 0.6, -0.6][e.ch] || 0; noteLight.v = Math.max(noteLight.v, 0.6 * e.v); }
+    }
+    flutter *= Math.pow(0.2, dt); noteLight.v *= Math.pow(0.015, dt); light.kick *= Math.pow(0.03, dt);
+    while (beats.length && T - beats[0].t > 1.5) beats.shift();
+  }
+  function updateLight(dt) {
+    const k = 1 - Math.pow(0.06, dt), kc = 1 - Math.pow(0.15, dt);
+    let open = 1, flash = 0;
+    if (bloom) {
+      open = Math.max(0, Math.min(1, (T - bloom.start) / 2.6));
+      for (const [at, amt] of [[bloom.waveAt, 1], [bloom.wave2At, 0.55]]) {
+        const u = (T - (at + bloom.waveDur * 0.92)) / 0.4;
+        flash += amt * Math.exp(-u * u);
+      }
+    }
+    const tx = selected ? selected.wx : focus.x * open, ty = selected ? selected.wy : focus.y * open, tz = selected ? selected.wz : focus.z * open;
+    light.x += (tx - light.x) * k; light.y += (ty - light.y) * k; light.z += (tz - light.z) * k;
+    let col = IDLE_LIGHT, want = (0.3 + 0.05 * Math.sin(T * 0.4)) * open * open + 0.45 * flash;
+    if (selected) {
+      const v = parseInt(selected.color.slice(1), 16);
+      col = [((v >> 16) / 255) * 0.65 + 0.35, (((v >> 8) & 255) / 255) * 0.65 + 0.35, ((v & 255) / 255) * 0.65 + 0.35];
+      want = 0.42 + 0.04 * Math.sin(T * 2.2);
+    }
+    light.cr += (col[0] - light.cr) * kc; light.cg += (col[1] - light.cg) * kc; light.cb += (col[2] - light.cb) * kc;
+    light.core += (want - light.core) * (flash > 0.05 ? 1 : kc);
+    project(light.x, light.y, light.z, tmp);
+    light.vis = !!tmp.vis; light.sx = tmp.sx; light.sy = tmp.sy;
+    const rWant = selected ? Math.max(90, selected.r * sizeScale * tmp.s * 6) : Math.min(0.6 * Math.max(W, H), Math.max(120, 240 * LS * spacing * tmp.s));
+    light.r += (rWant - light.r) * kc;
+    light.sky = (0.6 + 0.12 * Math.sin(T * 0.23)) * (0.35 + 0.65 * open);
+    light.skyX = W * (0.5 + 0.22 * Math.sin(cam.yaw * 0.5) + 0.04 * Math.sin(T * 0.07)); light.skyY = -0.35 * H;
+    // the wanderer: a slow orbit through the cloud around the focus, cyan → violet → pink and back
+    const R = fitR * spacing * 0.85, a = T * 0.09;
+    project(focus.x + Math.cos(a) * R, focus.y + Math.sin(T * 0.067) * R * 0.45, focus.z + Math.sin(a * 1.3) * R * 0.8, tmp);
+    wander.vis = !!tmp.vis && open > 0.5; wander.sx = tmp.sx; wander.sy = tmp.sy; wander.r = Math.max(10, 26 * tmp.s * LS);
+    const hue = 0.5 + 0.5 * Math.sin(T * 0.05);
+    wander.c = [0.3 + 0.7 * hue, 0.95 - 0.6 * hue, 1 - 0.18 * hue];
+    wander.glow = (0.32 + 0.25 * musicLevel) * Math.min(1, open * 2);
+    // the four lights every bubble shades with: core, wanderer, selection / hover, the music's last note
+    const set = (i, x, y, z, reach, c, k) => { LPOS.set([x, y, z, reach], i * 4); LCOL.set([c[0], c[1], c[2], k], i * 4); };
+    set(0, light.sx, light.sy, 160, Math.max(140, light.r * 1.6), [light.cr, light.cg, light.cb], light.vis ? light.core * 2.4 * (1 + 0.8 * light.kick) : 0);
+    set(1, wander.sx, wander.sy, 90, Math.max(160, wander.r * 9), wander.c, wander.vis ? 1.3 + 0.8 * musicLevel : 0);
+    const f = selected || hovered, fp = f && proj[f.i];
+    if (fp && fp.vis) { const v = parseInt(f.color.slice(1), 16); set(2, fp.sx, fp.sy, 50, Math.max(80, (fp.R || 20) * 9), [(v >> 16) / 255, ((v >> 8) & 255) / 255, (v & 255) / 255], selected ? 1.6 + 0.3 * Math.sin(T * 3) : 0.9); }
+    else set(2, 0, 0, 1, 1, [0, 0, 0], 0);
+    set(3, W * (0.5 + noteLight.pan * 0.4), H * 0.4, 260, Math.max(W, H) * 0.45, [1, 0.86, 0.7], noteLight.v * 1.6);
+  }
+
+  let cy = 1, sy = 0, cp = 1, sp = 0;
+  function project(x, y, z, out) {
+    const dx = x - cam.tx, dy = y - cam.ty, dz = z - cam.tz;
+    const x1 = dx * cy - dz * sy, z1 = dx * sy + dz * cy;
+    const y2 = dy * cp - z1 * sp, z2 = dy * sp + z1 * cp;
+    const depth = cam.dist - z2;
+    out.depth = depth;
+    if (depth < 10) { out.vis = false; return out; }
+    const s = F / depth;
+    out.sx = W / 2 + x1 * s; out.sy = H / 2 - y2 * s; out.s = s; out.vis = true;
+    return out;
+  }
+
+  function computeTree(root) {
+    const m = new Map([[root, 0]]); const queue = [root];
+    while (queue.length) {
+      const n = queue.shift();
+      for (const d of n.out) if (!m.has(d)) { m.set(d, m.get(n) + 1); queue.push(d); }
+    }
+    return m;
+  }
+
+  function nodeState(n) {
+    // returns [alpha, ring colour or null]
+    if (!visible(n)) return [0, null];
+    if (selected) {
+      if (n === selected) return [1, "#ffffff"];
+      if (treeMode && treeSet) return treeSet.has(n) ? [Math.max(0.45, 1 - treeSet.get(n) * 0.12), null] : [0.06, null];
+      if (selected.outSet.has(n)) return [1, "#4ff3ff"];
+      if (selected.incSet.has(n)) return [1, "#ff5fd2"];
+      return [0.08, null];
+    }
+    if (matchSet) return matchSet.has(n) ? [1, "#ffe14f"] : [0.12, null];
+    if (hovered) {
+      if (n === hovered || hovered.outSet.has(n) || hovered.incSet.has(n)) return [1, null];
+      return [0.35, null];
+    }
+    return [0.95, null];
+  }
+
+  // strand class: 0 normal, 1 faint, 2 hot (depends-on, cyan), 3 hot (used-by, pink)
+  function strandClass(l) {
+    if (selected) {
+      if (treeMode && treeSet) return treeSet.has(l.s) && treeSet.get(l.t) === treeSet.get(l.s) + 1 ? 2 : 1;
+      return l.s === selected ? 2 : l.t === selected ? 3 : 1;
+    }
+    if (hovered) return l.s === hovered ? 2 : l.t === hovered ? 3 : 1;
+    if (matchSet) return matchSet.has(l.s) || matchSet.has(l.t) ? 0 : 1;
+    return 0;
+  }
+
+  // ---------- render ----------
+  const tmp = {};
+
+  function drawFloor() {
+    const yF = -420 * spacing * LS;
+    for (let ring = 1; ring <= 5; ring++) {
+      const R = ring * 160 * spacing * LS;
+      setColor("#4ff3ff", 0.15 - ring * 0.02 + 0.04 * Math.sin(T * 1.5 - ring));
+      let px = 0, py = 0, has = false;
+      for (let k = 0; k <= 72; k++) {
+        const a = (k / 72) * Math.PI * 2;
+        project(Math.cos(a) * R, yF, Math.sin(a) * R, tmp);
+        if (!tmp.vis) { has = false; continue; }
+        if (has) lineSeg(px, py, tmp.sx, tmp.sy, 1.3);
+        px = tmp.sx; py = tmp.sy; has = true;
+      }
+    }
+  }
+
+  // per strand class (normal, faint, depends-on, used-by): half-width in px, alpha
+  const STRAND_STYLE = [[1.8, 0.15], [1.4, 0.035], [3.0, 0.7], [3.0, 0.7]];
+  const hotDep = [], hotUser = [];
+  function drawStrands() {
+    hotDep.length = 0; hotUser.length = 0;
+    const STEPS = strands.length > 2000 ? 2 : 3;
+    const tx = cam.tx, ty = cam.ty, tz = cam.tz, dist = cam.dist, cx0 = W / 2, cy0 = H / 2;
+    for (let i = 0; i < strands.length; i++) {
+      const l = strands[i].l;
+      if (!visible(l.s) || !visible(l.t)) continue;
+      const o3 = i * NP * 3, o = i * NP;
+      let ok = true;
+      for (let k = 0, j = o3; k < NP; k++, j += 3) {   // inlined project()
+        const dx = SP[j] - tx, dy = SP[j + 1] - ty, dz = SP[j + 2] - tz;
+        const x1 = dx * cy - dz * sy, z1 = dx * sy + dz * cy;
+        const y2 = dy * cp - z1 * sp, depth = dist - (dy * sp + z1 * cp);
+        if (depth < 10) { ok = false; break; }
+        const s = F / depth;
+        SX[o + k] = cx0 + x1 * s; SY[o + k] = cy0 - y2 * s;
+      }
+      if (!ok) continue;
+      const cls = strandClass(l), style = STRAND_STYLE[cls], hw = style[0], bl = Math.min(l.s.bl, l.t.bl);
+      if (bl <= 0.01) continue;
+      if (cls === 2) { setColor("#4ff3ff", style[1] * bl); hotDep.push(i); }
+      else if (cls === 3) { setColor("#ff5fd2", style[1] * bl); hotUser.push(i); }
+      else setColor(l.s.color, (cls === 0 && matchSet ? 0.3 : style[1]) * bl);
+      if (cls === 1) {   // dimmed background strands: a straight polyline is plenty
+        for (let k = 0; k < NP - 1; k++) lineSeg(SX[o + k], SY[o + k], SX[o + k + 1], SY[o + k + 1], hw);
+        continue;
+      }
+      // smooth curve through the rope: quadratic pieces between midpoints, 3 steps each
+      let qx = SX[o], qy = SY[o];
+      for (let k = 1; k < NP - 1; k++) {
+        const px = SX[o + k], py = SY[o + k];
+        const mx = (px + SX[o + k + 1]) / 2, my = (py + SY[o + k + 1]) / 2;
+        let lx = qx, ly = qy;
+        for (let s = 1; s <= STEPS; s++) {
+          const t = s / STEPS, it = 1 - t;
+          const x = it * it * qx + 2 * it * t * px + t * t * mx, y = it * it * qy + 2 * it * t * py + t * t * my;
+          lineSeg(lx, ly, x, y, hw);
+          lx = x; ly = y;
+        }
+        qx = mx; qy = my;
+      }
+      lineSeg(qx, qy, SX[o + NP - 1], SY[o + NP - 1], hw);
+    }
+  }
+
+  // data pulses flowing from the importer to the imported module, along the swaying strand
+  function drawPulses() {
+    for (const [list, color] of [[hotDep, "#4ff3ff"], [hotUser, "#ff5fd2"]]) {
+      setColor(color, 0.95);
+      for (const i of list) {
+        const st = strands[i], phase = (T * 0.45 + st.ph) % 1;
+        // one strand per link reports when its pulse lands: that module plays a bit
+        if (st.first) {
+          if (st.hotAt > T - 0.1 && phase < st.lastPhase) SFX.bit(st.l.t, panOf(st.l.t));
+          st.lastPhase = phase; st.hotAt = T;
+        }
+        const f = phase * (NP - 1), k = Math.floor(f), u = f - k, o = i * NP;
+        const x = SX[o + k] + (SX[o + k + 1] - SX[o + k]) * u, y = SY[o + k] + (SY[o + k + 1] - SY[o + k]) * u;
+        quad(x - 7, y - 7, x + 7, y + 7, 0, 0, 1, 1, 4);
+      }
+    }
+  }
+
+  // the core's light on the floor (the bubbles' own glows are lit per pixel, see the lit layer)
+  function drawGlows() {
+    // the core's light on the floor: a soft ellipse on the rings straight below it
+    if (light.core > 0.02) {
+      project(light.x, -420 * spacing * LS, light.z, tmp);
+      if (tmp.vis) {
+        const w = 520 * LS * spacing * tmp.s, h = w * Math.max(0.12, Math.abs(Math.sin(cam.pitch)) * 0.9);
+        cr = (light.cr * 255) | 0; cg = (light.cg * 255) | 0; cb = (light.cb * 255) | 0; ca = Math.min(255, light.core * 0.5 * 255) | 0;
+        quad(tmp.sx - w, tmp.sy - h, tmp.sx + w, tmp.sy + h, 0, 0, 1, 1, 4);
+      }
+    }
+  }
+
+  // the overlay only clears the box it drew into last frame
+  let dirty = null;
+  function mark(x0, y0, x1, y1) {
+    if (!dirty) dirty = [x0, y0, x1, y1];
+    else { dirty[0] = Math.min(dirty[0], x0); dirty[1] = Math.min(dirty[1], y0); dirty[2] = Math.max(dirty[2], x1); dirty[3] = Math.max(dirty[3], y1); }
+  }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  }
+
+  // a floating name card at the bubble's upper right, like the movie's code labels
+  function drawTag(n, p, full) {
+    const R = n.r * sizeScale * p.s;
+    const fs = full ? Math.max(15, Math.min(22, 12 + p.s * 6)) : Math.max(11, Math.min(16, 9 + p.s * 4));
+    ctx.font = `700 ${fs}px "Chakra Petch", "JetBrains Mono", sans-serif`;
+    const nameW = ctx.measureText(n.name).width;
+    let chips = [];
+    if (full) {
+      chips = n.classes.filter((c) => c !== n.name).slice(0, 2);
+      chips.push(`${n.funcs} fn`, `${n.out.length}↓ ${n.inc.length}↑`);
+    }
+    ctx.font = `10px "JetBrains Mono", monospace`;
+    const chipW = chips.map((c) => ctx.measureText(c).width + 12);
+    const rowW = chipW.reduce((a, b) => a + b + 4, -4);
+    const pad = full ? 10 : 7, w = Math.max(nameW, rowW) + pad * 2, h = fs + pad * 1.4 + (chips.length ? 22 : 0);
+    let x = p.sx + R * 0.7, y = p.sy - R * 0.7 - h;
+    if (x + w > W - 8) x = p.sx - R * 0.7 - w;
+    if (y < 70) y = p.sy + R * 0.7;
+    ctx.globalAlpha = full ? 1 : 0.85 * p.a;
+    mark(x - 18, y - 18, x + w + 18, y + h + 18);
+    if (full) { ctx.shadowColor = n.color; ctx.shadowBlur = 14; }
+    roundRect(x, y, w, h, 7);
+    ctx.fillStyle = "rgba(30,12,52,0.85)"; ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = hexA(n.color, full ? 0.9 : 0.55); ctx.lineWidth = full ? 1.6 : 1; ctx.stroke();
+    ctx.textAlign = "left"; ctx.textBaseline = "top";
+    ctx.font = `700 ${fs}px "Chakra Petch", "JetBrains Mono", sans-serif`;
+    ctx.fillStyle = mixWhite(n.color, 0.25);
+    ctx.fillText(n.name, x + pad, y + pad * 0.7);
+    if (chips.length) {
+      ctx.font = `10px "JetBrains Mono", monospace`;
+      let cx = x + pad; const cyy = y + pad * 0.7 + fs + 5;
+      chips.forEach((c, i) => {
+        roundRect(cx, cyy, chipW[i], 16, 4);
+        ctx.fillStyle = "rgba(255,255,255,0.07)"; ctx.fill();
+        ctx.strokeStyle = hexA(n.color, 0.45); ctx.lineWidth = 1; ctx.stroke();
+        ctx.fillStyle = "#dfe4ff"; ctx.fillText(c, cx + 6, cyy + 3);
+        cx += chipW[i] + 4;
+      });
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawSmallLabel(n, p) {
+    const R = n.r * sizeScale * p.s, fs = Math.max(9, Math.min(13, 9 + p.s * 3));
+    ctx.font = `600 ${fs}px "JetBrains Mono", monospace`;
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    ctx.globalAlpha = Math.max(0.5, p.a);
+    const tw = ctx.measureText(n.name).width;
+    ctx.fillStyle = "rgba(4,2,12,0.7)";
+    ctx.fillRect(p.sx - tw / 2 - 4, p.sy + R + 4, tw + 8, fs + 4);
+    mark(p.sx - tw / 2 - 4, p.sy + R + 4, p.sx + tw / 2 + 4, p.sy + R + fs + 8);
+    ctx.fillStyle = n.color;
+    ctx.fillText(n.name, p.sx, p.sy + R + 6);
+    ctx.globalAlpha = 1;
+  }
+
+  // adaptive resolution: if frames get slow, render the WebGL layer at a lower pixel ratio
+  let showFps = new URLSearchParams(location.search).has("fps");
+  if (showFps) window.CR_debug = { beat: (s = 1) => onBeat(s), flutter: (v = 1) => { flutter = v; }, note: (pan = 0, v = 1) => { noteLight.pan = pan; noteLight.v = v; } };
+  function adaptQuality(raw) {
+    if (raw > 250) return; // the window was hidden or the machine stalled
+    emaMs += (Math.min(raw, 100) - emaMs) * 0.05;
+    fpsFrames++; fpsMs += raw;
+    if (fpsMs >= 500) {
+      $("fps").textContent = showFps ? `${Math.round(fpsFrames * 1000 / fpsMs)} fps · ${glCanvas.width}×${glCanvas.height} · js ${jsMs.toFixed(1)} ms (${Object.entries(prof).map(([k, v]) => k + " " + v.toFixed(1)).join(" · ")}) · audio ${SFX.state || "off"}` : "";
+      fpsFrames = 0; fpsMs = 0;
+    }
+    perfMs += raw;
+    if (perfMs < 1500) return;
+    perfMs = 0;
+    if (performance.now() < settleUntil) return;     // loading a repo or resizing: hitches are expected
+    const maxScale = Math.min(DPR, 2);
+    if (emaMs > 26) {                                // only drop resolution if it stays slow for ~4.5 s
+      goodMs = 0;
+      if (++slowChecks >= 3 && glScale > 1) { glScale = 1; sizeGL(); slowChecks = 0; settle(2000); }
+    } else {
+      slowChecks = 0;
+      if (emaMs < 19 && glScale < maxScale && (goodMs += 1500) >= 6000) { glScale = maxScale; sizeGL(); goodMs = 0; settle(2000); }
+    }
+  }
+
+  let jsMs = 0;
+  const prof = { tick: 0, world: 0, strands: 0, atm: 0, lines: 0, bubbles: 0, overlay: 0 };
+  let profAt = 0;
+  const mark2 = (k) => { if (!showFps) return; const t = performance.now(); prof[k] += (t - profAt - prof[k]) * 0.05; profAt = t; };
+  function frame(now) {
+    const t0 = performance.now(); profAt = t0;
+    const raw = now - last;
+    const dt = Math.min(0.05, raw / 1000); last = now; T += dt;
+    adaptQuality(raw);
+    tick(); mark2("tick");
+    updateWorld(); mark2("world");
+    stepStrands(); mark2("strands");
+    if (dragNode) { SFX.dragMove(dragSpeed, dragStretch); dragSpeed *= 0.88; }   // the scrape fades when the hand stops
+
+    // camera easing
+    if (++fitTick % 20 === 0) updateFit();
+    if (!userZoomed && !selected) goal.dist = fitDist;
+    if (!selected) {                                   // glide after the crowd, softly
+      const k = 1 - Math.pow(0.35, dt);
+      goal.tx += (focus.x - goal.tx) * k; goal.ty += (focus.y - goal.ty) * k; goal.tz += (focus.z - goal.tz) * k;
+    }
+    idle += dt;
+    if (spin && !dragging && idle > 1.5) cam.yaw += dt * 0.07;
+    const e = 1 - Math.pow(0.02, dt);
+    cam.dist += (goal.dist - cam.dist) * e;
+    cam.tx += (goal.tx - cam.tx) * e; cam.ty += (goal.ty - cam.ty) * e; cam.tz += (goal.tz - cam.tz) * e;
+    cy = Math.cos(cam.yaw); sy = Math.sin(cam.yaw); cp = Math.cos(cam.pitch); sp = Math.sin(cam.pitch);
+    listen(dt);
+    for (const n of nodes) {
+      project(n.wx, n.wy, n.wz, proj[n.i]);
+      const st = nodeState(n); proj[n.i].a = st[0]; proj[n.i].ring = st[1];
+    }
+    updateLight(dt);
+    const order = nodes.filter((n) => proj[n.i].vis && proj[n.i].a > 0).sort((a, b) => proj[b.i].depth - proj[a.i].depth);
+
+    // ---- WebGL: atmosphere, background, additive light (confetti, floor, strands, pulses), bubbles, front fog ----
+    mark2("world");
+    drawAtmosphere(order); mark2("atm");
+    gl.disable(gl.BLEND);
+    drawBackground();
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE, gl.ONE);
+    for (const m of motes) {
+      m.y += m.v; if (m.y > 700) m.y = -700;
+      project(m.x * LS, m.y * LS, m.z * LS, tmp);
+      if (!tmp.vis) continue;
+      setColor(m.c, Math.min(0.75, tmp.s * 0.8 * LS) * (0.55 + 0.45 * Math.sin(T * 2 + m.tw)));
+      const k = tmp.s * 1.6 * LS;
+      quad(tmp.sx, tmp.sy, tmp.sx + m.w * k, tmp.sy + m.h * k, 0, 0, 1, 1, 5);
+    }
+    flush(quads);
+
+    drawFloor();
+    drawStrands();
+    flush(lines); mark2("lines");
+    drawPulses();
+    drawGlows();
+    flush(quads);
+
+    // bubbles, back to front: dark core, wrapped code, glassy shell, then the light on it
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    texBudget = 3;
+    gl.useProgram(spriteProg.p);
+    gl.uniform4fv(spriteProg.loc["u_lpos[0]"], LPOS); gl.uniform4fv(spriteProg.loc["u_lcol[0]"], LCOL);
+    for (const n of order) {
+      const p = proj[n.i];
+      const grow = Math.min(1, (T - n.born) / 1.2), pop = grow < 1 ? 1 - Math.pow(1 - grow, 3) + Math.sin(grow * Math.PI) * 0.25 : 1;
+      const R = p.R = n.r * n.bs * sizeScale * p.s * (n === hovered || n === dragNode ? 1.08 : 1) * pop;
+      if (R < 0.6) continue;
+      const fade = p.fade = p.a * Math.max(0.3, Math.min(1, p.s * 1.4)) * Math.min(1, n.bl * 2.5);
+      const x = p.sx, y = p.sy;
+      setColor("#07051a", fade * 0.6);
+      quad(x - R * 0.97, y - R * 0.97, x + R * 0.97, y + R * 0.97, 0, 0, 1, 1, 0);
+      if (R > 9) {
+        const s = codeSlot(n);
+        if (s) { setColor("#ffffff", fade * 0.95); quad(x - R, y - R, x + R, y + R, s.u0, s.v0, s.u1, s.v1, s.mode); }
+      }
+      const c = spriteCell(n.color), h = R * (SPR / BODY) / 2;
+      setColor("#ffffff", fade);
+      quad(x - h, y - h, x + h, y + h, c.u0, c.v0, c.u1, c.v1, 3);
+      // its own glow: selected / hovered / a neighbour of the selection / the bloom's waves / the music's ripple
+      let g = n.bp * 0.6 + (n.wv || 0) * 0.45, rgb = hexRGB(n.color);
+      if (n === selected) g += 0.55 + 0.1 * Math.sin(T * 3);
+      else if (n === hovered) g += 0.3;
+      else if (selected && p.ring) { rgb = p.ring === "#4ff3ff" ? CYAN : PINK; g += 0.28 + 0.05 * Math.sin(T * 2 + n.phase); }
+      cr = Math.min(255, rgb[0] * g) | 0; cg = Math.min(255, rgb[1] * g) | 0; cb = Math.min(255, rgb[2] * g) | 0; ca = Math.min(255, fade * 255) | 0;
+      const lh = R * 1.3;
+      quad(x - lh, y - lh, x + lh, y + lh, 0, 0, 1, 1, 6);
+    }
+    flush(quads);
+    drawFrontFog(); mark2("bubbles");
+
+    // ---- 2D overlay: selection rings, change flashes and labels ----
+    if (dirty) ctx.clearRect(dirty[0] - 4, dirty[1] - 4, dirty[2] - dirty[0] + 8, dirty[3] - dirty[1] + 8);
+    dirty = null;
+    for (const n of order) {
+      const p = proj[n.i], R = p.R;
+      if (!(R >= 0.6)) continue;
+      if (p.ring) {
+        mark(p.sx - R - 6, p.sy - R - 6, p.sx + R + 6, p.sy + R + 6);
+        ctx.globalAlpha = 0.6 + 0.4 * Math.sin(T * 4);
+        ctx.strokeStyle = p.ring; ctx.lineWidth = n === selected ? 2 : 1.4;
+        ctx.beginPath(); ctx.arc(p.sx, p.sy, R + 4, 0, Math.PI * 2); ctx.stroke();
+      }
+      if (n.flash && T < n.flash.until && p.a > 0.05) {
+        // expanding shock-rings mark freshly added (green) or edited (yellow) modules
+        const left = (n.flash.until - T) / 6, reach = R + 32 * Math.max(0.6, p.s);
+        mark(p.sx - reach, p.sy - reach, p.sx + reach, p.sy + reach);
+        for (let k = 0; k < 2; k++) {
+          const ph = ((T * 0.8 + k * 0.5) % 1);
+          ctx.globalAlpha = (1 - ph) * left;
+          ctx.strokeStyle = n.flash.color; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(p.sx, p.sy, R + 3 + ph * 26 * Math.max(0.6, p.s), 0, Math.PI * 2); ctx.stroke();
+        }
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    // labels: small ones for context, name cards for the biggest, full cards for the focus
+    const full = new Set([selected, hovered].filter(Boolean));
+    for (const n of order) {
+      const p = proj[n.i];
+      if (full.has(n) || p.a < 0.3 || n.bl < 1) continue;
+      const neighbour = (selected && (treeMode && treeSet ? treeSet.has(n) : p.ring)) ||
+                        (hovered && (hovered.outSet.has(n) || hovered.incSet.has(n))) || (matchSet && matchSet.has(n));
+      if (bigNodes.has(n) && !selected && !matchSet && !hovered) drawTag(n, p, false);
+      else if (allLabels || neighbour) drawSmallLabel(n, p);
+    }
+    for (const n of order) if (full.has(n)) drawTag(n, proj[n.i], true);
+
+    mark2("overlay");
+    jsMs += (performance.now() - t0 - jsMs) * 0.05;
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // ---------- interaction ----------
+  let dragging = false, down = null, moved = false, dragSpeed = 0, dragStretch = 0;
+  const panOf = (n) => { const p = proj[n.i]; return p && p.vis ? Math.max(-1, Math.min(1, (p.sx / W) * 2 - 1)) : 0; };
+  const pointers = new Map(); let pinch0 = 0, dist0 = 0;
+
+  function pick(x, y) {
+    let best = null, bestDepth = Infinity;
+    for (const n of nodes) {
+      const p = proj[n.i];
+      if (!p || !p.vis || p.a < 0.05 || n.bl < 0.5) continue;
+      const R = Math.max(6, n.r * n.bs * sizeScale * p.s);
+      const dx = x - p.sx, dy = y - p.sy;
+      if (dx * dx + dy * dy < R * R && p.depth < bestDepth) { best = n; bestDepth = p.depth; }
+    }
+    return best;
+  }
+
+  // move a bubble in the screen plane at its own depth (inverse of the camera rotation)
+  function dragBy(n, ddx, ddy) {
+    const s = (proj[n.i].s || 1) * spacing, X = ddx / s, Y = -ddy / s;
+    const z1 = -sp * Y;
+    n.x += cy * X + sy * z1; n.y += cp * Y; n.z += -sy * X + cy * z1;
+  }
+
+  canvas.addEventListener("pointerdown", (e) => {
+    try { canvas.setPointerCapture(e.pointerId); } catch (_) { /* synthetic pointers */ }
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size === 2) {
+      const [a, b] = [...pointers.values()]; pinch0 = Math.hypot(a.x - b.x, a.y - b.y); dist0 = goal.dist;
+      dragNode = null;
+    }
+    down = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, yaw: cam.yaw, pitch: cam.pitch,
+             node: pointers.size === 1 ? pick(e.clientX, e.clientY) : null };
+    moved = false; dragging = true; idle = 0;
+    canvas.classList.add("dragging");
+  });
+  canvas.addEventListener("pointermove", (e) => {
+    const tip = $("tip");
+    if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (dragging && down) {
+      if (pointers.size === 2) {
+        const [a, b] = [...pointers.values()];
+        const d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (pinch0 > 0) { goal.dist = Math.max(150, Math.min(4000 * LS, dist0 * pinch0 / d)); userZoomed = true; }
+        moved = true; return;
+      }
+      const dx = e.clientX - down.x, dy = e.clientY - down.y;
+      if (Math.abs(dx) + Math.abs(dy) > 4) moved = true;
+      if (down.node && moved) {
+        if (!dragNode) {
+          const wires = [...down.node.outL.map((l) => [l.t, l.refs]), ...down.node.incL.map((l) => [l.s, l.refs])]
+            .sort((a, b) => b[1] - a[1]).slice(0, 4).map(([w]) => ({ id: w.id, funcs: w.funcs }));
+          SFX.dragStart(down.node, panOf(down.node), wires);
+        }
+        dragStretch = Math.min(1, Math.hypot(e.clientX - down.x, e.clientY - down.y) / 320);
+        const tNow = performance.now();
+        dragSpeed = Math.max(dragSpeed, Math.hypot(e.clientX - down.lx, e.clientY - down.ly) / Math.max(8, tNow - (down.lt || tNow - 16)) * 1000);
+        down.lt = tNow;
+        dragNode = down.node;
+        alpha = Math.max(alpha, 0.06);
+        dragBy(dragNode, e.clientX - down.lx, e.clientY - down.ly);
+      } else if (!down.node) {
+        cam.yaw = down.yaw - dx * 0.006;
+        cam.pitch = Math.max(-1.3, Math.min(1.3, down.pitch + dy * 0.005));
+      }
+      down.lx = e.clientX; down.ly = e.clientY;
+      idle = 0; tip.style.display = "none"; return;
+    }
+    const n = pick(e.clientX, e.clientY);
+    if (n && n !== hovered) SFX.hover(n, panOf(n));
+    hovered = n;
+    canvas.classList.toggle("hovering", !!n);
+    if (n) {
+      tip.style.display = "block"; tip.style.left = e.clientX + "px"; tip.style.top = e.clientY + "px";
+      tip.innerHTML = `<span style="color:${n.color}">●</span> ${esc(n.id)} &nbsp;<span style="color:var(--ink-dim)">${n.funcs} fn · ${n.loc} loc · ` +
+        `<span style="color:var(--dep)">${n.out.length}↓</span> <span style="color:var(--user)">${n.inc.length}↑</span></span>`;
+    } else tip.style.display = "none";
+  });
+  const end = (e) => {
+    pointers.delete(e.pointerId);
+    if (pointers.size > 0) return;
+    canvas.classList.remove("dragging");
+    if (dragging && !moved) {
+      const n = pick(e.clientX, e.clientY);
+      n ? select(n) : select(null);
+    }
+    if (dragNode) SFX.dragEnd();
+    dragging = false; down = null; pinch0 = 0; dragNode = null; dragSpeed = 0; dragStretch = 0;
+  };
+  canvas.addEventListener("pointerup", end);
+  canvas.addEventListener("pointercancel", end);
+  canvas.addEventListener("pointerleave", () => { if (!dragging) { hovered = null; $("tip").style.display = "none"; } });
+  canvas.addEventListener("wheel", (e) => {
+    e.preventDefault(); idle = 0; userZoomed = true;
+    goal.dist = Math.max(150, Math.min(4000 * LS, goal.dist * Math.exp(e.deltaY * 0.0012)));
+  }, { passive: false });
+
+  // ---------- selection & panel ----------
+  const KW = "class|struct|public|private|protected|virtual|override|const|static|inline|return|if|else|for|while|switch|case|break|namespace|using|typedef|enum|template|typename|void|bool|int|char|float|double|unsigned|signed|long|short|uint8_t|uint16_t|uint32_t|uint64_t|int32_t|int16_t|int8_t|nullptr|true|false|this|new|delete|operator|friend|explicit|extern|auto|import|from|export|default|function|let|var|def|self|None|True|False|package|interface|extends|implements|fn|pub|mod|use|impl|func|go|type|async|await|yield|lambda|in|is|not|and|or|val|fun|object|when|end|module|require|local|nil";
+  const TOK = new RegExp(`(\\/\\/[^\\n]*|\\/\\*[\\s\\S]*?\\*\\/|^\\s*#(?!\\s*(?:include|import|define|if|ifdef|ifndef|endif|else|elif|pragma|undef)\\b)[^\\n]*)|("(?:[^"\\\\\\n]|\\\\.)*"|'(?:[^'\\\\\\n]|\\\\.)*')|(^\\s*#\\s*\\w+)|\\b(${KW})\\b|\\b(0x[0-9a-fA-F]+|\\d+)\\b`, "gm");
+  function highlight(src) {
+    return esc(src).replace(TOK, (m, com, str, pp, kw, num) =>
+      com ? `<span class="com">${com}</span>` : str ? `<span class="str">${str}</span>` :
+      pp ? `<span class="pp">${pp}</span>` : kw ? `<span class="kw">${kw}</span>` : `<span class="num">${num}</span>`);
+  }
+  function linkButtons(el, list, refsOf) {
+    el.innerHTML = "";
+    if (!list.length) { el.innerHTML = '<span class="empty">none</span>'; return; }
+    for (const n of [...list].sort((a, b) => a.id.localeCompare(b.id))) {
+      const b = document.createElement("button");
+      b.innerHTML = esc(n.id) + (refsOf ? `<small>×${refsOf(n)}</small>` : "");
+      b.title = refsOf ? `${refsOf(n)} references` : "";
+      b.onclick = () => select(n);
+      el.appendChild(b);
+    }
+  }
+
+  function aimAt(n) { goal.tx = n.x * spacing; goal.ty = n.y * spacing; goal.tz = n.z * spacing; }
+
+  function select(n, keepCamera) {
+    const was = selected;
+    selected = n; idle = 0;
+    if (!keepCamera) {
+      if (n && n !== was) {
+        const deps = [...n.outL].sort((a, b) => b.refs - a.refs).map((l) => ({ n: l.t, refs: l.refs, pan: panOf(l.t) }));
+        SFX.select(n, deps, panOf(n));
+      } else if (!n && was) SFX.deselect();
+    }
+    treeSet = n ? computeTree(n) : null;
+    const panel = $("panel");
+    if (!n) { panel.classList.remove("open"); goal.dist = userZoomed ? Math.max(goal.dist, 850) : fitDist; return; }
+    if (!keepCamera) { aimAt(n); goal.dist = Math.min(goal.dist, 420 + n.r * sizeScale * 4); }
+    $("pName").textContent = n.name;
+    $("pGroup").innerHTML = `<span style="color:${n.color}">●</span> ${esc(n.group)} <span style="color:var(--ink-dim)">· ${esc(n.lang || "")}</span>`;
+    const fileHtml = n.files.map((f) => native ? `<a href="#" data-file="${esc(f)}" title="Open in your editor">${esc(f)}</a>` : esc(f)).join(" + ");
+    $("pMeta").innerHTML = `${fileHtml} · ${n.loc.toLocaleString()} lines · ${n.funcs} functions`;
+    $("pDepN").textContent = n.out.length; $("pUseN").textContent = n.inc.length;
+    const outRefs = new Map(n.outL.map((l) => [l.t, l.refs])), incRefs = new Map(n.incL.map((l) => [l.s, l.refs]));
+    linkButtons($("pDeps"), n.out, (d) => outRefs.get(d));
+    linkButtons($("pUsers"), n.inc, (u) => incRefs.get(u));
+    const treeNodes = [...treeSet.keys()].filter((x) => x !== n);
+    $("pTreeH").hidden = !treeMode; $("pTree").hidden = !treeMode;
+    $("pTreeN").textContent = treeNodes.length;
+    if (treeMode) linkButtons($("pTree"), treeNodes);
+    $("pFnN").textContent = n.funcs;
+    $("pFns").innerHTML = n.functions.length
+      ? n.functions.map((f) => { const i = Math.max(f.lastIndexOf("::") + 1, f.lastIndexOf(".")); return `<div>${i > 0 ? `<span>${esc(f.slice(0, i + 1))}</span>${esc(f.slice(i + 1))}` : esc(f)}</div>`; }).join("") +
+        (n.funcs > n.functions.length ? `<div><span>… ${n.funcs - n.functions.length} more</span></div>` : "")
+      : '<span class="empty">none (declarations only)</span>';
+    $("pClasses").innerHTML = n.classes.length ? n.classes.map(esc).join(" · ") : '<span class="empty">none detected</span>';
+    $("pFile").textContent = n.previewFile;
+    $("pCode").innerHTML = highlight(n.preview);
+    if (!keepCamera) { $("pCode").scrollTop = 0; $("pFns").scrollTop = 0; }
+    panel.classList.add("open");
+  }
+  $("close").onclick = () => select(null);
+  $("pMeta").addEventListener("click", (e) => {
+    const a = e.target.closest("a[data-file]");
+    if (!a) return;
+    e.preventDefault();
+    tell({ type: "openFile", path: currentRoot.replace(/\/+$/, "") + "/" + a.dataset.file });
+  });
+
+  // ---------- toolbar ----------
+  function toggle(btn, fn) {
+    btn.onclick = () => { const v = btn.getAttribute("aria-pressed") !== "true"; btn.setAttribute("aria-pressed", v); fn(v); SFX.ui(v); };
+  }
+  toggle($("tTree"), (v) => { treeMode = v; if (selected) select(selected, true); });
+  toggle($("tLabels"), (v) => (allLabels = v));
+  toggle($("tPhys"), (v) => (physics = v));
+  toggle($("tSpin"), (v) => (spin = v));
+
+  // ---------- Size / Spread sliders (remembered per browser) ----------
+  function loadView() { try { return JSON.parse(localStorage.getItem("coderoom.view") || "{}"); } catch (_) { return {}; } }
+  function saveView() { try { localStorage.setItem("coderoom.view", JSON.stringify({ size: sizeScale, spread: spacing })); } catch (_) {} }
+  function slider(id, out, fmt, apply, initial) {
+    const el = $(id);
+    const set = (v) => { el.value = v; $(out).textContent = fmt(+el.value); apply(+el.value); };
+    el.addEventListener("input", () => { set(el.value); saveView(); SFX.slider((el.value - el.min) / (el.max - el.min)); });
+    el.addEventListener("dblclick", () => { set(1); saveView(); });
+    if (initial !== undefined) set(initial);
+  }
+  const saved = loadView();
+  slider("sSize", "oSize", (v) => Math.round(v * 100) + "%", (v) => (sizeScale = v), saved.size);
+  slider("sSpread", "oSpread", (v) => v.toFixed(1) + "×", (v) => { spacing = v; if (selected) aimAt(selected); }, saved.spread);
+
+  // ---------- sound: on/off and volume (remembered per browser) ----------
+  let soundPrefs = { on: true, vol: 0.7, music: true };
+  try { Object.assign(soundPrefs, JSON.parse(localStorage.getItem("coderoom.sound") || "{}")); } catch (_) {}
+  const saveSound = () => { try { localStorage.setItem("coderoom.sound", JSON.stringify(soundPrefs)); } catch (_) {} };
+  slider("sVol", "oVol", (v) => Math.round(v * 100) + "%", (v) => { soundPrefs.vol = v; SFX.setVolume(v); saveSound(); }, soundPrefs.vol);
+  $("tSound").setAttribute("aria-pressed", soundPrefs.on);
+  SFX.setVolume(soundPrefs.vol);
+  SFX.setEnabled(soundPrefs.on);
+  toggle($("tSound"), (v) => { soundPrefs.on = v; SFX.setEnabled(v); saveSound(); });
+  $("tMusic").setAttribute("aria-pressed", soundPrefs.music);
+  SFX.setMusic(soundPrefs.music);
+  // the radio names what it plays (and whose it is) while it plays
+  SFX.onTrack = (t) => {
+    const np = $("np");
+    if (!t) { np.classList.remove("show"); return; }
+    np.innerHTML = `♫ <b>${esc(t.title)}</b> · ${esc(t.artist)}${t.piano ? " · on piano" : ""} · ${esc(t.license)}`;
+    np.classList.add("show");
+  };
+  toggle($("tMusic"), (v) => { soundPrefs.music = v; SFX.setMusic(v); saveSound(); });
+  // browsers only let audio start from a gesture; the Mac app allows it right away
+  const wake = () => { if (soundPrefs.on) SFX.start(); };
+  window.addEventListener("pointerdown", wake, true);
+  window.addEventListener("keydown", wake, true);
+  document.addEventListener("visibilitychange", () => SFX.setHidden(document.hidden));
+  wake();
+  $("tUpdate").onclick = rescan;
+  let autoTimer = 0;
+  toggle($("tAuto"), (v) => { clearInterval(autoTimer); if (v) autoTimer = setInterval(() => { if (!document.hidden) rescan(); }, 4000); });
+
+  // ---------- legend ----------
+  function buildLegend() {
+    const legend = $("legend"); legend.innerHTML = "";
+    for (const g of groups) {
+      const b = document.createElement("button"); b.className = "chip"; b.title = g;
+      b.innerHTML = `<span class="dot" style="background:${groupColor[g]};color:${groupColor[g]}"></span>${esc(shortGroup(g))} <small>${groupCounts[g]}</small>`;
+      b.classList.toggle("off", hiddenGroups.has(g));
+      b.onclick = () => {
+        hiddenGroups.has(g) ? hiddenGroups.delete(g) : hiddenGroups.add(g);
+        updateFit();
+        SFX.ui(!hiddenGroups.has(g));
+        b.classList.toggle("off", hiddenGroups.has(g));
+        if (selected && hiddenGroups.has(selected.group)) select(null);
+      };
+      legend.appendChild(b);
+    }
+  }
+
+  // ---------- search ----------
+  const q = $("q"), results = $("results");
+  let hits = [], active = 0;
+  function renderResults() {
+    results.innerHTML = "";
+    hits.slice(0, 40).forEach((n, i) => {
+      const b = document.createElement("button"); if (i === active) b.className = "active";
+      b.innerHTML = `<span style="color:${n.color}">●</span> ${esc(n.id)} <span style="color:var(--ink-dim);margin-left:auto">${n.funcs} fn</span>`;
+      b.onmousedown = (e) => { e.preventDefault(); choose(n); };
+      results.appendChild(b);
+    });
+    results.classList.toggle("open", hits.length > 0);
+  }
+  function choose(n) { select(n); q.blur(); results.classList.remove("open"); matchSet = null; }
+  q.addEventListener("input", () => {
+    SFX.key();
+    const s = q.value.trim().toLowerCase();
+    if (!s) { hits = []; matchSet = null; renderResults(); return; }
+    const has = (n) => n.id.toLowerCase().includes(s) || n.classes.some((c) => c.toLowerCase().includes(s)) ||
+                       n.functions.some((f) => f.toLowerCase().includes(s));
+    hits = nodes.filter((n) => visible(n) && has(n))
+                .sort((a, b) => (a.name.toLowerCase().startsWith(s) ? 0 : 1) - (b.name.toLowerCase().startsWith(s) ? 0 : 1) || b.inc.length - a.inc.length);
+    matchSet = new Set(hits); active = 0; renderResults();
+  });
+  q.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown") { active = Math.min(hits.length - 1, active + 1); renderResults(); e.preventDefault(); }
+    else if (e.key === "ArrowUp") { active = Math.max(0, active - 1); renderResults(); e.preventDefault(); }
+    else if (e.key === "Enter" && hits[active]) choose(hits[active]);
+    else if (e.key === "Escape") { q.value = ""; hits = []; matchSet = null; renderResults(); q.blur(); }
+  });
+  q.addEventListener("blur", () => setTimeout(() => results.classList.remove("open"), 100));
+  window.addEventListener("keydown", (e) => {
+    if (e.target.closest && e.target.closest("input, textarea")) return;
+    if (e.key === "Escape") { $("repoMenu").hidden = true; $("browser").hidden = true; select(null); }
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === "/") { e.preventDefault(); q.focus(); }
+    if (e.key === "u" || e.key === "U") rescan();
+    if (e.key === "f" || e.key === "F") { showFps = !showFps; $("fps").textContent = ""; }
+    if (e.key === "o" || e.key === "O") { e.preventDefault(); $("repoBtn").click(); }
+  });
+
+  // ---------- boot: ?root=…, else the last repository, else the welcome screen ----------
+  (async () => {
+    const asked = new URLSearchParams(location.search).get("root");
+    const info = await refreshRecent();
+    const root = asked || info.default || null;
+    if (root) openRepo(root); else showWelcome("pick");
+  })();
+})();
+</script>
+</body>
+</html>
