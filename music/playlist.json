@@ -1,0 +1,375 @@
+[
+ {
+  "file": "jester_elysium.mod",
+  "title": "Elysium",
+  "artist": "Jester (Volker Tripp)",
+  "license": "CC BY-NC-SA",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=40475",
+  "gain": -12.1,
+  "pianoGain": -2.4
+ },
+ {
+  "file": "jester_stardust_memories.mod",
+  "title": "Stardust Memories",
+  "artist": "Jester (Volker Tripp)",
+  "license": "CC BY-NC-SA",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=59344",
+  "gain": -13.3,
+  "pianoGain": -1
+ },
+ {
+  "file": "jester_children_of_science.mod",
+  "title": "Children of Science",
+  "artist": "Jester (Volker Tripp)",
+  "license": "CC BY-NC-SA",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=55680",
+  "gain": -15.7,
+  "pianoGain": -0.7
+ },
+ {
+  "file": "jester_breath_of_life.mod",
+  "title": "Breath of Life",
+  "artist": "Jester (Volker Tripp)",
+  "license": "CC BY-NC-SA",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=102963",
+  "gain": -8.1,
+  "pianoGain": 3.9
+ },
+ {
+  "file": "jester_whisper_my_thoughts.mod",
+  "title": "Whisper My Thoughts",
+  "artist": "Jester (Volker Tripp)",
+  "license": "CC BY-NC-SA",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=106595",
+  "gain": -17.1,
+  "pianoGain": 1
+ },
+ {
+  "file": "jester_taste_of_your_tears.mod",
+  "title": "Taste of Your Tears",
+  "artist": "Jester (Volker Tripp)",
+  "license": "CC BY-NC-SA",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=104794",
+  "gain": -9.4,
+  "pianoGain": 1.8
+ },
+ {
+  "file": "jester_enlightenment.mod",
+  "title": "Enlightenment",
+  "artist": "Jester (Volker Tripp)",
+  "license": "CC BY-NC-SA",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=104125",
+  "gain": -11.7,
+  "pianoGain": -4
+ },
+ {
+  "file": "m0d_wild_perspective.mod",
+  "title": "Wild Perspective",
+  "artist": "m0d",
+  "license": "Public Domain",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=53329",
+  "gain": -8.9,
+  "piano": false
+ },
+ {
+  "file": "drozerix_may_is_4_her.mod",
+  "title": "May Is 4 Her",
+  "artist": "Drozerix",
+  "license": "Public Domain",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=197296",
+  "gain": -17.4,
+  "pianoGain": 1.8
+ },
+ {
+  "file": "serpent_sundawn.mod",
+  "title": "Sundawn",
+  "artist": "Serpent",
+  "license": "CC BY-NC-SA",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=163311",
+  "gain": -15.1,
+  "pianoGain": -1.1
+ },
+ {
+  "file": "skiff_come_and_find_me.mp3",
+  "title": "Come and Find Me",
+  "artist": "Eric Skiff",
+  "license": "CC BY 4.0",
+  "source": "https://ericskiff.com/music",
+  "gain": -3.5
+ },
+ {
+  "file": "skiff_searching.mp3",
+  "title": "Searching",
+  "artist": "Eric Skiff",
+  "license": "CC BY 4.0",
+  "source": "https://ericskiff.com/music",
+  "gain": -5.6
+ },
+ {
+  "file": "skiff_prologue.mp3",
+  "title": "Prologue",
+  "artist": "Eric Skiff",
+  "license": "CC BY 4.0",
+  "source": "https://ericskiff.com/music",
+  "gain": -4.1
+ },
+ {
+  "file": "skiff_under_the_stars.mp3",
+  "title": "We're All Under the Stars",
+  "artist": "Eric Skiff",
+  "license": "CC BY 4.0",
+  "source": "https://ericskiff.com/music",
+  "gain": -5.1
+ },
+ {
+  "file": "skiff_behind_the_waterfall.mp3",
+  "title": "Behind the Waterfall Lies the Beginning",
+  "artist": "Eric Skiff",
+  "license": "CC BY 4.0",
+  "source": "https://ericskiff.com/music",
+  "gain": -1.7
+ },
+ {
+  "file": "ozzed_lugn_techno.mp3",
+  "title": "Lugn Techno",
+  "artist": "Ozzed",
+  "license": "CC BY-SA",
+  "source": "https://ozzed.net/music/lesser-than-three.shtml",
+  "gain": -7.2
+ },
+ {
+  "file": "ozzed_home_at_last.mp3",
+  "title": "Home at Last",
+  "artist": "Ozzed",
+  "license": "CC BY-SA",
+  "source": "https://ozzed.net/music/lesser-than-three.shtml",
+  "gain": -6
+ },
+ {
+  "file": "ozzed_seductive_space.mp3",
+  "title": "Seductive Space",
+  "artist": "Ozzed",
+  "license": "CC BY-SA",
+  "source": "https://ozzed.net/music/lesser-than-three.shtml",
+  "gain": -6.6
+ },
+ {
+  "file": "ozzed_dragspel_i_natten.mp3",
+  "title": "Dragspel i Natten",
+  "artist": "Ozzed",
+  "license": "CC BY-SA",
+  "source": "https://ozzed.net/music/nackskott.shtml",
+  "gain": -3.5
+ },
+ {
+  "file": "ozzed_a_calmer_day.mp3",
+  "title": "A Calmer Day",
+  "artist": "Ozzed",
+  "license": "CC BY-SA",
+  "source": "https://ozzed.net/music/dunes-at-night.shtml",
+  "gain": -8.7
+ },
+ {
+  "file": "drozerix_keygen_wraith.xm",
+  "title": "Keygen Wraith",
+  "artist": "Drozerix",
+  "license": "Public Domain",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=207854",
+  "gain": -14.6,
+  "keygen": true
+ },
+ {
+  "file": "drozerix_keygen_9000.xm",
+  "title": "Keygen 9000",
+  "artist": "Drozerix",
+  "license": "Public Domain",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=173938",
+  "gain": -14.9,
+  "keygen": true
+ },
+ {
+  "file": "drozerix_reloaded_insanity.xm",
+  "title": "Reloaded Insanity",
+  "artist": "Drozerix",
+  "license": "Public Domain",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=177968",
+  "gain": -14.6,
+  "keygen": true
+ },
+ {
+  "file": "drozerix_bit_loader.xm",
+  "title": "Bit Loader",
+  "artist": "Drozerix",
+  "license": "Public Domain",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=178415",
+  "gain": -13.3,
+  "keygen": true
+ },
+ {
+  "file": "drozerix_fluxchip.xm",
+  "title": "Fluxchip",
+  "artist": "Drozerix",
+  "license": "Public Domain",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=200310",
+  "gain": -15.4,
+  "keygen": true
+ },
+ {
+  "file": "drozerix_silicon_dancer.mod",
+  "title": "Silicon Dancer",
+  "artist": "Drozerix",
+  "license": "Public Domain",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=209692",
+  "gain": -14.4,
+  "keygen": true,
+  "pianoGain": -0.4
+ },
+ {
+  "file": "drozerix_neon_techno.mod",
+  "title": "Neon Techno",
+  "artist": "Drozerix",
+  "license": "Public Domain",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=178172",
+  "gain": -14.6,
+  "keygen": true,
+  "piano": false
+ },
+ {
+  "file": "drozerix_cyber_spider.xm",
+  "title": "Cyber Spider",
+  "artist": "Drozerix",
+  "license": "Public Domain",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=192354",
+  "gain": -12.0,
+  "keygen": true
+ },
+ {
+  "file": "drozerix_air_ride.mod",
+  "title": "Air Ride",
+  "artist": "Drozerix",
+  "license": "Public Domain",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=213325",
+  "gain": -14.7,
+  "keygen": true,
+  "pianoGain": -2.6
+ },
+ {
+  "file": "drozerix_master_select.xm",
+  "title": "Master Select",
+  "artist": "Drozerix",
+  "license": "Public Domain",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=190186",
+  "gain": -13.8,
+  "keygen": true
+ },
+ {
+  "file": "dubmood_-_mario_airlines_keygen_edit.xm",
+  "title": "Mario Airlines (keygen edit)",
+  "artist": "Dubmood (Razor 1911)",
+  "license": "Mod Archive Distribution license · fetched from modarchive.org",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=182911",
+  "remote": 182911,
+  "gain": -7.4,
+  "keygen": true
+ },
+ {
+  "file": "razor_1911_-_battlefield_2142kg.xm",
+  "title": "Battlefield 2142 keygen",
+  "artist": "Razor 1911",
+  "license": "Mod Archive Distribution license · fetched from modarchive.org",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=196408",
+  "remote": 196408,
+  "gain": -12.4,
+  "keygen": true
+ },
+ {
+  "file": "dt_rzr.xm",
+  "title": "razor1911",
+  "artist": "Razor 1911 intro",
+  "license": "Mod Archive Distribution license · fetched from modarchive.org",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=41411",
+  "remote": 41411,
+  "gain": -10.5,
+  "keygen": true
+ },
+ {
+  "file": "db_pdx1.xm",
+  "title": "Paradox #1",
+  "artist": "Beldoroon",
+  "license": "Mod Archive Distribution license · fetched from modarchive.org",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=36630",
+  "remote": 36630,
+  "gain": -9.8,
+  "keygen": true
+ },
+ {
+  "file": "db_pdx2.xm",
+  "title": "Paradox #2",
+  "artist": "Beldoroon",
+  "license": "Mod Archive Distribution license · fetched from modarchive.org",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=36633",
+  "remote": 36633,
+  "gain": -11.5,
+  "keygen": true
+ },
+ {
+  "file": "db_pdx3.xm",
+  "title": "Paradox #3",
+  "artist": "Beldoroon",
+  "license": "Mod Archive Distribution license · fetched from modarchive.org",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=36636",
+  "remote": 36636,
+  "gain": -10.6,
+  "keygen": true
+ },
+ {
+  "file": "bd_fairl.xm",
+  "title": "Fairlight intro mix",
+  "artist": "Beldoroon",
+  "license": "Mod Archive Distribution license · fetched from modarchive.org",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=35618",
+  "remote": 35618,
+  "gain": -9.7,
+  "keygen": true
+ },
+ {
+  "file": "fairlight_quake_3_cracktro.mod",
+  "title": "FLT Quake 3 cracktro",
+  "artist": "Fairlight cracktro",
+  "license": "Mod Archive Distribution license · fetched from modarchive.org",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=182054",
+  "remote": 182054,
+  "gain": -10.6,
+  "keygen": true,
+  "piano": false
+ },
+ {
+  "file": "paradox_crack04.mod",
+  "title": "paradox.crack04",
+  "artist": "Paradox crack",
+  "license": "Mod Archive Distribution license · fetched from modarchive.org",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=129097",
+  "remote": 129097,
+  "gain": -13.7,
+  "keygen": true,
+  "piano": false
+ },
+ {
+  "file": "db_key19.xm",
+  "title": "Keygen 19",
+  "artist": "keygen",
+  "license": "Mod Archive Distribution license · fetched from modarchive.org",
+  "source": "https://modarchive.org/index.php?request=view_by_moduleid&query=180519",
+  "remote": 180519,
+  "gain": -10.4,
+  "keygen": true
+ },
+ {
+  "file": "aria.synth",
+  "synth": "aria",
+  "title": "Partenza (an aria for the void)",
+  "artist": "Code Room",
+  "license": "original, played live",
+  "gain": 13
+ }
+]
